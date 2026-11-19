@@ -117,7 +117,7 @@ header{grid-area:head;display:flex;align-items:flex-end;justify-content:space-be
 .art{width:62px;height:62px;border-radius:16px;background:rgba(255,255,255,.06) center/cover no-repeat;display:grid;place-items:center;color:var(--faint);
   box-shadow:0 12px 28px -14px rgba(0,0,0,.8);flex:none}
 /* weather */
-.wx{padding:16px;flex:1 1 auto;display:flex;flex-direction:column;min-height:0;gap:12px}
+.wx{padding:16px;flex:1 1 auto;display:flex;flex-direction:column;min-height:0;gap:10px}
 .wx.slim{flex:0 0 auto;padding:12px 16px}
 .wx.slim .hours,.wx.slim .hlab{display:none}
 .wx.slim .wxt{font-size:30px}
@@ -126,7 +126,7 @@ header{grid-area:head;display:flex;align-items:flex-end;justify-content:space-be
 .wxt{font-size:44px;font-weight:200;letter-spacing:-2px;line-height:1}
 .wxc{font-size:13px;color:var(--muted);margin-top:4px}
 .wxic{color:var(--text);opacity:.9}
-.hours{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin-top:-4px}
+.hours{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin-top:-2px}
 .hr{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:12px;color:var(--muted);padding:10px 0;border-radius:16px;background:rgba(255,255,255,.045)}
 .hr b{color:var(--text);font-weight:600;font-size:14px}
 .hr .rain{font-size:10px;color:#8ec5ff;height:12px}
@@ -312,13 +312,21 @@ button:active{transform:scale(.94);transition-duration:.08s}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 
 /* ---------- Lyrics pill (Apple Music style, lightweight) ---------- */
-.lyp{flex:none;padding:12px 16px;border-radius:22px;display:none;overflow:hidden;position:relative}
-.lyp.show{display:block}
-.lywin{height:66px;overflow:hidden;position:relative;-webkit-mask-image:linear-gradient(transparent,#000 22%,#000 78%,transparent);mask-image:linear-gradient(transparent,#000 22%,#000 78%,transparent)}
-.lylist{transition:transform .6s var(--ease);will-change:transform}
-.lyl{height:22px;line-height:22px;font-size:14px;font-weight:700;letter-spacing:-.1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:rgba(245,245,247,.32);transition:color .45s,opacity .45s}
+.lyp{flex:1 1 0;min-height:90px;padding:12px 16px;border-radius:22px;display:none;overflow:hidden;position:relative;cursor:pointer}
+.lyp.show{display:flex;flex-direction:column}
+.lywin{flex:1;min-height:0;overflow:hidden;position:relative;-webkit-mask-image:linear-gradient(transparent,#000 18%,#000 80%,transparent);mask-image:linear-gradient(transparent,#000 18%,#000 80%,transparent)}
+.lylist{transition:transform .55s var(--ease)}
+.lyl{line-height:22px;padding:1px 0;font-size:14px;font-weight:700;letter-spacing:-.1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:rgba(245,245,247,.3);transition:color .4s}
 .lyl.cur{color:var(--text)}
-.music.big~.lyp .lywin{height:110px}
+.lyl .w{transition:color .25s}
+.lyp.big .lyl{font-size:22px;line-height:29px;padding:5px 0;white-space:normal;letter-spacing:-.3px}
+.lyp.big .lyl.cur{color:rgba(245,245,247,.38)}
+.lyp.big .lyl.cur .w.on{color:var(--text)}
+.lyp.big .lyl.cur .w.now{color:var(--text);text-shadow:0 0 18px color-mix(in srgb,var(--text) 45%,transparent)}
+.lysrc{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);font-weight:600;margin-bottom:4px;display:none}
+.lyp.big .lysrc{display:block}
+.side .wx:not(.big):not(.slim).compact{flex:0 0 auto}
+.ampm{font-size:.38em;font-weight:500;letter-spacing:0;margin-left:4px;color:var(--muted)}
 /* ---------- Phone / portrait ---------- */
 @media (max-width:900px),(orientation:portrait){
   .app{height:auto;min-height:100vh;grid-template-columns:1fr;grid-template-rows:none;grid-template-areas:"head" "music" "main" "ac"}
@@ -353,10 +361,10 @@ button:active{transform:scale(.94);transition-duration:.08s}
     <div class="vrow" id="vrow"><span id="vIco"></span><div class="vol" id="vol"><div class="fill" id="volFill"></div></div></div>
     <button class="devbtn" id="devBtn"><span id="devIco"></span><span style="min-width:0"><div class="dl">Playing on</div><div class="dn" id="devName">Choose a device</div></span></button>
   </section>
-  <section class="lyp glass" id="lyp"><div class="lywin"><div class="lylist" id="lyList"></div></div></section>
+  <section class="lyp glass" id="lyp"><div class="lysrc" id="lySrc">Lyrics</div><div class="lywin" id="lyWin"><div class="lylist" id="lyList"></div></div></section>
   <section class="wx glass tapcard" id="wx">
     <div class="wxnow"><div><div class="wxt" id="wxT">--°</div><div class="wxc" id="wxC">Weather</div></div><div class="wxic" id="wxIc"></div></div>
-    <div class="lab hlab" style="font-size:11px;margin-top:auto">Next hours</div>
+    <div class="lab hlab" style="font-size:11px">Next hours</div>
     <div class="hours" id="hours"></div>
   </section>
   </aside>
@@ -418,7 +426,7 @@ const CONFIG = {
     { id: "light.bedroom_tapo_l930_bed",       name: "Bed",       art: "bed" },
     { id: "light.bedroom_desk",                name: "Desk",      art: "desk" },
   ],
-  climate: "climate.panasonic_ac_panasonic_ac",
+  climate: "climate.panasonic_ac_panasonic_ac",   // if this one disappears, the panel uses any other AC it finds
   climateName: "Air conditioner",
   media: "auto",        // "auto" picks the Spotify player
   weather: "auto",
@@ -617,6 +625,7 @@ async function connect(force){
       retry = 0; msgId = 1; pending = {}; subs = {};
       const states = await send({ type: "get_states" });
       S = {}; states.forEach(s => S[s.entity_id] = s);
+      pickClimate();
       await send({ type: "subscribe_events", event_type: "state_changed" });
       subscribeForecast(); loadOokla();
       await loadScenes();
@@ -655,6 +664,15 @@ async function call(domain, service, data){
   catch (e) { toast("Couldn't do that: " + e.message); }
 }
 function setConn(ok, txt){ $("conn").classList.toggle("ok", ok); $("connTxt").textContent = ok ? (DEMO ? "Demo" : "Live") : txt; }
+
+/* Use the configured AC, or another climate entity if that one is missing/unavailable
+   (e.g. after switching to a different AC integration). */
+function pickClimate(){
+  const ok = id => S[id] && S[id].state !== "unavailable";
+  if (ok(CONFIG.climate)) return;
+  const alt = Object.keys(S).find(k => k.startsWith("climate.") && ok(k));
+  if (alt) CONFIG.climate = alt;
+}
 
 /* ---- Scenes storage: saved in Home Assistant, so every device sees the same scenes ---- */
 let SCENES = [];
@@ -1048,22 +1066,36 @@ function renderMusic(){
   $("devIco").innerHTML = icon(devIcon(a.source), 20);
   loadLyrics(a); renderProgress();
 }
-/* ---- Lyrics pill: synced lyrics from LRCLIB (free community library), three lines at a time ---- */
-let LY = { key: "", lines: [], cur: -2 };
+/* ---- Lyrics: synced lyrics from LRCLIB (free community library).
+   Lines come with timestamps. Word timings are used when the lyrics include them (enhanced LRC);
+   otherwise each word is timed by spreading the line over how long it is sung.
+   Power: no polling — one timer fires at the next line (or next word when enlarged), and nothing runs while paused. ---- */
+let LY = { key: "", lines: [], cur: -1, word: -1, exact: false }, lyTimer = null;
 function parseLRC(txt){
   const out = [];
   txt.split(/\r?\n/).forEach(row => {
     const times = [...row.matchAll(/\[(\d+):(\d+(?:\.\d+)?)\]/g)];
-    const text = row.replace(/\[[^\]]*\]/g, "").trim();
-    times.forEach(m => out.push({ t: +m[1] * 60 + +m[2], text: text || "♪" }));
+    const body = row.replace(/\[[^\]]*\]/g, "");
+    const wt = [...body.matchAll(/<(\d+):(\d+(?:\.\d+)?)>\s*([^<]*)/g)];          // enhanced LRC word tags
+    const text = body.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
+    times.forEach(m => out.push({ t: +m[1] * 60 + +m[2], text: text || "♪",
+      words: wt.length ? wt.map(w => ({ w: w[3].trim(), t: +w[1] * 60 + +w[2] })).filter(w => w.w) : null }));
   });
-  return out.sort((x, y) => x.t - y.t);
+  out.sort((x, y) => x.t - y.t);
+  out.forEach((l, i) => {
+    const next = out[i + 1] ? out[i + 1].t : l.t + 6;
+    if (l.words) { l.exact = true; return; }
+    const ws = l.text.split(" "), sung = Math.min(Math.max(next - l.t - 0.25, 0.4), ws.length * 0.42 + 0.5);
+    const weight = ws.map(w => w.length + 2), total = weight.reduce((a, b) => a + b, 0);
+    let acc = 0; l.words = ws.map((w, k) => { const t = l.t + sung * acc / total; acc += weight[k]; return { w, t }; });
+  });
+  return out;
 }
 async function loadLyrics(a){
   const key = (a.media_title || "") + "|" + (a.media_artist || "");
-  if (LY.key === key) return;
-  LY = { key, lines: [], cur: -2 };
-  $("lyp").classList.remove("show"); $("lyList").innerHTML = "";
+  if (LY.key === key) return scheduleLyrics();
+  LY = { key, lines: [], cur: -1, word: -1, exact: false }; clearTimeout(lyTimer);
+  $("lyp").classList.remove("show"); $("lyList").innerHTML = ""; layoutSide();
   if (!a.media_title) return;
   const artist = String(a.media_artist || "").split(/,|&| feat\.? /i)[0].trim();
   let hit = DEMO ? { syncedLyrics: DEMO_LRC } : null;
@@ -1079,27 +1111,53 @@ async function loadLyrics(a){
       }
     } catch { hit = null; }
   }
-  if (LY.key !== key || !hit || !hit.syncedLyrics) return;      // no synced lyrics: the pill stays hidden
+  if (LY.key !== key || !hit || !hit.syncedLyrics) return;
   LY.lines = parseLRC(hit.syncedLyrics);
   if (!LY.lines.length) return;
-  $("lyList").innerHTML = LY.lines.map(l => `<div class="lyl">${esc(l.text)}</div>`).join("");
-  $("lyp").classList.add("show");
-  syncLyrics();
+  LY.exact = LY.lines.some(l => l.exact);
+  $("lySrc").textContent = LY.exact ? "Lyrics · word-synced" : "Lyrics";
+  $("lyList").innerHTML = LY.lines.map(l => `<div class="lyl">${l.words.map(w => `<span class="w">${esc(w.w)}</span>`).join(" ")}</div>`).join("");
+  $("lyp").classList.add("show"); layoutSide();
+  LY.cur = -1; scheduleLyrics();
 }
-function syncLyrics(){
-  if (!LY.lines.length || document.hidden) return;
-  const s = S[mediaEntity()]; if (!s) return;
-  const pos = position(s) + 0.3;
-  let i = -1; for (let k = 0; k < LY.lines.length; k++) { if (LY.lines[k].t <= pos) i = k; else break; }
-  if (i === LY.cur) return;
+function lyBig(){ return $("lyp").classList.contains("big"); }
+function showLyrics(pos){
+  const lines = LY.lines; let i = -1;
+  for (let k = 0; k < lines.length; k++) { if (lines[k].t <= pos) i = k; else break; }
   const els = $("lyList").children;
-  if (els[LY.cur]) els[LY.cur].classList.remove("cur");
-  if (els[i]) els[i].classList.add("cur");
-  LY.cur = i;
-  const big = $("music").classList.contains("big"), row = 22, offset = big ? 2 : 1;   // current line sits 2nd (or 3rd when enlarged)
-  $("lyList").style.transform = `translateY(${-(Math.max(i, 0) - offset) * row}px)`;
+  if (i !== LY.cur) {
+    if (els[LY.cur]) { els[LY.cur].classList.remove("cur"); els[LY.cur].querySelectorAll(".on,.now").forEach(w => w.classList.remove("on", "now")); }
+    if (els[i]) els[i].classList.add("cur");
+    LY.cur = i; LY.word = -1;
+    const target = els[Math.max(i, 0)];
+    if (target) $("lyList").style.transform = `translateY(${-(target.offsetTop - $("lyWin").clientHeight * (lyBig() ? .3 : .34))}px)`;
+  }
+  if (lyBig() && i >= 0) {                                  // word-by-word highlight (only when enlarged)
+    const ws = lines[i].words; let j = -1;
+    for (let k = 0; k < ws.length; k++) { if (ws[k].t <= pos) j = k; else break; }
+    if (j !== LY.word) {
+      const spans = els[i].children;
+      for (let k = 0; k < spans.length; k++) { spans[k].classList.toggle("on", k <= j); spans[k].classList.toggle("now", k === j); }
+      LY.word = j;
+    }
+  }
+  return i;
 }
-setInterval(syncLyrics, 400);
+function scheduleLyrics(){
+  clearTimeout(lyTimer);
+  if (!LY.lines.length) return;
+  const s = S[mediaEntity()]; if (!s) return;
+  const pos = position(s) + 0.15;
+  const i = showLyrics(pos);
+  if (s.state !== "playing" || document.hidden || $("idle").classList.contains("show")) return;   // nothing runs while paused or asleep
+  let next = LY.lines[i + 1] ? LY.lines[i + 1].t : null;
+  if (lyBig() && i >= 0) { const w = LY.lines[i].words.find(x => x.t > pos); if (w && (next == null || w.t < next)) next = w.t; }
+  if (next != null) lyTimer = setTimeout(scheduleLyrics, Math.max(40, (next - pos) * 1000));
+}
+document.addEventListener("visibilitychange", scheduleLyrics);
+/* Left column: lyrics take the spare room; weather shrinks to fit. */
+function layoutSide(){ $("wx").classList.toggle("compact", $("lyp").classList.contains("show")); renderWeather(); }
+$("lyp").addEventListener("click", () => setFocus(focus === "ly" ? "" : "ly"));
 
 function renderProgress(){
   const id = mediaEntity(), s = id && S[id]; if (!s || drag.has("prog")) return;
@@ -1170,12 +1228,12 @@ function renderWeather(){
   $("wxC").textContent = (WNAME[s.state] || nice(s.state)) + (a.humidity != null ? ` · ${Math.round(a.humidity)}% humidity` : "");
   $("wxIc").innerHTML = icon(WICON[s.state] || "cloud", 40, 1.3);
   const now = Date.now() - 30 * 60000;
-  const next = forecast.filter(f => Date.parse(f.datetime) >= now).slice(0, focus === "wx" ? 15 : focus === "music" ? 0 : 10);
+  const next = forecast.filter(f => Date.parse(f.datetime) >= now).slice(0, focus === "wx" ? 15 : (focus === "music" || focus === "ly") ? 0 : $("wx").classList.contains("compact") ? 5 : 10);
   const key = focus + next.map(f => f.datetime + f.temperature + f.condition).join();
   if ($("hours").dataset.k === key) return; $("hours").dataset.k = key;
   $("hours").innerHTML = next.map(f => {
     const d = new Date(f.datetime);
-    const h = d.toLocaleTimeString([], { hour: "numeric" }).replace(/\s?([AP])M/i, (m, x) => x.toLowerCase());
+    const h = d.toLocaleTimeString("en-US", { hour: "numeric", hour12: true }).replace(/\s?([AP])M/i, (m, x) => x.toLowerCase());
     const rain = f.precipitation_probability != null ? (f.precipitation_probability >= 20 ? f.precipitation_probability + "%" : "") : (f.precipitation ? f.precipitation + "mm" : "");
     return `<div class="hr"><span>${h}</span>${icon(WICON[f.condition] || "cloud", 20, 1.6)}<b>${Math.round(f.temperature)}°</b><span class="rain">${rain}</span></div>`;
   }).join("") || `<div class="hint" style="grid-column:1/-1;font-size:13px;color:var(--muted)">Loading forecast…</div>`;
@@ -1362,7 +1420,9 @@ function setFocus(f){
     $("wx").classList.toggle("slim", f === "music");
     $("wx").classList.toggle("big", f === "wx");
     $("ac").classList.toggle("big", f === "ac"); $("net").classList.toggle("slim", f === "ac");
-    renderWeather(); LY.cur = -2; syncLyrics();
+    $("lyp").classList.toggle("big", f === "ly");
+    if (f === "ly") { $("music").classList.add("slim"); $("wx").classList.add("slim"); }
+    renderWeather(); LY.cur = -1; scheduleLyrics();
   });
 }
 ["music", "wx", "ac"].forEach(id => $(id).addEventListener("click", e => {
@@ -1392,9 +1452,12 @@ function disarmOff(){ clearTimeout(offTimer); $("offAll").classList.remove("arm"
 let lastTouch = Date.now();
 function tick(){
   const d = new Date();
-  const time = d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }).replace(/\s?[AP]M/i, "");
+  const parts = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true }).split(" ");
+  const time = parts[0], ampm = parts[1] || "";
   const date = d.toLocaleDateString([], { weekday: "long", day: "numeric", month: "long" });
-  $("clock").textContent = time; $("date").textContent = date; $("roomClock").textContent = time; $("iClock").textContent = time; $("iDate").textContent = date;
+  const html = `${time}<span class="ampm">${ampm}</span>`;
+  if ($("clock").innerHTML !== html) { $("clock").innerHTML = html; $("roomClock").innerHTML = html; $("iClock").innerHTML = html; }
+  $("date").textContent = date; $("iDate").textContent = date;
   const h = d.getHours(), g = h < 5 ? "Good night" : h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : h < 21 ? "Good evening" : "Good night";
   const greet = CONFIG.name ? `${g}, ${CONFIG.name}` : g;
   if ($("greet").textContent !== greet) { $("greet").textContent = greet; $("iGreet").textContent = greet; }
@@ -1406,8 +1469,8 @@ function renderIdleSummary(){
   const m = mediaEntity() && S[mediaEntity()];
   $("iSum").innerHTML = `<span>${on ? on + " light" + (on > 1 ? "s" : "") + " on" : "Lights off"}</span>${ac ? `<span>${ac.state === "off" ? "AC off" : "AC " + fmtT(ac.attributes.temperature) + "°"}</span>` : ""}${m && m.state === "playing" && m.attributes.media_title ? `<span>♪ ${esc(m.attributes.media_title)}</span>` : ""}`;
 }
-function sleep(){ closeSheet(); if (focus) setFocus(""); document.body.classList.remove("roommode"); roomFit(false); $("idle").classList.add("show"); }
-function wake(){ lastTouch = Date.now(); $("idle").classList.remove("show"); }
+function sleep(){ closeSheet(); clearTimeout(lyTimer); if (focus) setFocus(""); document.body.classList.remove("roommode"); roomFit(false); $("idle").classList.add("show"); }
+function wake(){ lastTouch = Date.now(); $("idle").classList.remove("show"); scheduleLyrics(); }
 ["pointerdown", "keydown"].forEach(ev => document.addEventListener(ev, () => { lastTouch = Date.now(); }, true));
 $("idle").addEventListener("pointerdown", e => { e.stopPropagation(); e.preventDefault(); wake(); });
 let toastTimer;
@@ -1468,7 +1531,7 @@ function demoCall(domain, service, d){
 /* =====================================================================
    Auto-update: reload when a newer version is installed
    ===================================================================== */
-const VERSION = "2026.11.19.8";
+const VERSION = "2026.11.19.9";
 if (!DEMO) setInterval(async () => {
   try { const v = await (await fetch("version.json?t=" + Date.now(), { cache: "no-store" })).json();
     if (v.version && v.version !== VERSION && !sheetMode) location.reload(); } catch {}
@@ -1500,7 +1563,7 @@ $("mMini").onclick = playPause;
 $("offIco").innerHTML = icon("power", 20); $("offAll").onclick = everythingOff;
 $("netRun").innerHTML = icon("refresh", 16); $("netRun").onclick = runSpeedtest;
 bindBar($("vol"), "vol", p => { const v = Math.round(p * 100) / 100; mOpt((st, at) => at.volume_level = v); mcall("volume_set", { volume_level: v }); }, $("volFill"));
-bindBar($("prog"), "prog", p => { const s = S[mediaEntity()]; if (s && s.attributes.media_duration) { const v = Math.round(p * s.attributes.media_duration); mOpt((st, at) => { at.media_position = v; at.media_position_updated_at = new Date().toISOString(); }); mcall("media_seek", { seek_position: v }); LY.cur = -2; } }, $("progFill"));
+bindBar($("prog"), "prog", p => { const s = S[mediaEntity()]; if (s && s.attributes.media_duration) { const v = Math.round(p * s.attributes.media_duration); mOpt((st, at) => { at.media_position = v; at.media_position_updated_at = new Date().toISOString(); }); mcall("media_seek", { seek_position: v }); LY.cur = -1; setTimeout(scheduleLyrics, 50); } }, $("progFill"));
 window.addEventListener("resize", () => buildScenes());
 buildLights();
 document.querySelectorAll(".app .glass").forEach((el, i) => el.style.setProperty("--d", (i * 0.04).toFixed(2) + "s"));
