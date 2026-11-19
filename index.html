@@ -60,7 +60,7 @@ html:has(body.has-room){background:#0d0c0b}
 body.has-room{background:transparent}
 body.has-room .glass{--glass:rgba(22,20,18,.36)}
 .glass{background:var(--glass);border:1px solid var(--stroke);border-radius:var(--r);
-  -webkit-backdrop-filter:blur(24px) saturate(140%);backdrop-filter:blur(24px) saturate(140%);
+  -webkit-backdrop-filter:blur(16px) saturate(130%);backdrop-filter:blur(16px) saturate(130%);
   box-shadow:0 1px 0 rgba(255,255,255,.07) inset,0 0 0 1px rgba(0,0,0,.25),0 30px 60px -28px rgba(0,0,0,.9),0 10px 22px -14px rgba(0,0,0,.7);
   background-image:linear-gradient(180deg,color-mix(in srgb,var(--accent) 7%,transparent),transparent 42%)}
 .light.on{box-shadow:0 1px 0 rgba(255,255,255,.08) inset,0 30px 60px -28px rgba(0,0,0,.9),0 0 46px -14px var(--lc,#fff)}
@@ -105,7 +105,9 @@ header{grid-area:head;display:flex;align-items:flex-end;justify-content:space-be
 .music.slim .art{width:44px;height:44px;border-radius:12px}
 .music.big{flex:1 1 auto}
 .music.big .mtop{flex-direction:column;align-items:stretch;flex:1 1 auto;min-height:0;gap:14px}
-.music.big .art{flex:1 1 auto;width:auto;height:auto;max-width:100%;aspect-ratio:1;align-self:center;min-height:0;border-radius:24px;box-shadow:0 24px 50px -20px rgba(0,0,0,.9)}
+.music.big .art{flex:1 1 0;width:auto;height:auto;max-width:100%;aspect-ratio:1/1;align-self:center;min-height:0;border-radius:24px;box-shadow:0 24px 50px -20px rgba(0,0,0,.9)}
+.music.big .mtop .minfo{flex:none}
+.music.big .mini{display:none}
 .music.big .mtitle{font-size:21px}
 .music.big .martist{font-size:15px}
 .music,.wx,.ac,.net{transition:flex .35s cubic-bezier(.2,.8,.2,1),background .3s}
@@ -309,41 +311,14 @@ button:active{transform:scale(.94);transition-duration:.08s}
 ::view-transition-group(*){animation-duration:.45s;animation-timing-function:var(--ease)}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 
-/* ---------- Now playing (Apple Music style) ---------- */
-.np{position:fixed;inset:0;z-index:30;display:grid;grid-template-columns:minmax(280px,36%) 1fr;gap:56px;
-  padding:calc(56px + env(safe-area-inset-top)) 56px 40px;opacity:0;pointer-events:none;transform:scale(1.04);
-  transition:opacity .45s var(--ease),transform .55s var(--ease);overflow:hidden;background:#0b0a09}
-.np.open{opacity:1;pointer-events:auto;transform:none}
-.npbg{position:absolute;inset:-25%;z-index:0;background:#2a2622 center/cover;filter:blur(80px) saturate(170%) brightness(.6);animation:drift 26s ease-in-out infinite alternate}
-.npbg2{position:absolute;inset:-25%;z-index:0;background:inherit;background-position:30% 70%;mix-blend-mode:screen;opacity:.35;filter:blur(90px) saturate(180%);animation:drift 33s ease-in-out infinite alternate-reverse}
-@keyframes drift{from{transform:rotate(0) scale(1.1)}to{transform:rotate(14deg) scale(1.3) translate(4%,3%)}}
-.np::after{content:"";position:absolute;inset:0;z-index:0;background:linear-gradient(180deg,rgba(0,0,0,.15),rgba(0,0,0,.45))}
-.np>*{position:relative;z-index:1}
-.np>.npbg{position:absolute;z-index:0}
-.npclose{position:absolute!important;top:calc(16px + env(safe-area-inset-top));left:calc(50% - 24px);width:48px;height:30px;border-radius:15px;background:rgba(255,255,255,.14);display:grid;place-items:center;z-index:2!important}
-.npleft{display:flex;flex-direction:column;justify-content:center;gap:16px;min-height:0}
-.npart{width:100%;max-width:min(100%,46vh);aspect-ratio:1;border-radius:18px;background:rgba(255,255,255,.08) center/cover;box-shadow:0 30px 60px -20px rgba(0,0,0,.7);display:grid;place-items:center;color:rgba(255,255,255,.4);
-  transition:transform .6s var(--spring)}
-.np.paused .npart{transform:scale(.9)}
-.npt{font-size:24px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.npa{font-size:18px;color:rgba(255,255,255,.65);margin-top:-10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.np .prog{background:rgba(255,255,255,.25)}.np .prog .fill,.np .vol .fill{background:#fff}
-.np .times{color:rgba(255,255,255,.6)}
-.np .mctl button{color:rgba(255,255,255,.75)}.np .mctl button.mid{color:#fff}
-.np .mctl button.big{background:#fff;color:#111;width:60px;height:60px;border-radius:30px}
-.np .vrow{color:rgba(255,255,255,.6)}.np .vol{background:rgba(255,255,255,.25)}
-.np .devbtn{background:rgba(255,255,255,.12)}
-.lyr{position:relative;overflow:hidden;min-height:0;-webkit-mask-image:linear-gradient(transparent,#000 14%,#000 72%,transparent);mask-image:linear-gradient(transparent,#000 14%,#000 72%,transparent)}
-.lyrin{transition:transform .9s var(--ease);will-change:transform}
-.ly{font-size:34px;font-weight:800;line-height:1.22;letter-spacing:-.4px;margin:0 0 26px;color:rgba(255,255,255,.3);filter:blur(1.4px);
-  transform-origin:left center;transition:color .6s,filter .6s,transform .6s var(--spring);cursor:pointer;text-align:left;display:block;width:100%}
-.ly.near{filter:blur(.6px)}
-.ly.cur{color:#fff;filter:none;transform:scale(1.04)}
-.ly.dots{letter-spacing:6px}
-.lyr.plain{overflow:auto;-webkit-mask-image:none;mask-image:none}
-.lyr.plain .ly{color:rgba(255,255,255,.8);filter:none;font-size:26px;cursor:default}
-.lymsg{position:absolute;inset:0;display:grid;place-items:center;font-size:20px;color:rgba(255,255,255,.55);text-align:center;padding:24px}
-
+/* ---------- Lyrics pill (Apple Music style, lightweight) ---------- */
+.lyp{flex:none;padding:12px 16px;border-radius:22px;display:none;overflow:hidden;position:relative}
+.lyp.show{display:block}
+.lywin{height:66px;overflow:hidden;position:relative;-webkit-mask-image:linear-gradient(transparent,#000 22%,#000 78%,transparent);mask-image:linear-gradient(transparent,#000 22%,#000 78%,transparent)}
+.lylist{transition:transform .6s var(--ease);will-change:transform}
+.lyl{height:22px;line-height:22px;font-size:14px;font-weight:700;letter-spacing:-.1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:rgba(245,245,247,.32);transition:color .45s,opacity .45s}
+.lyl.cur{color:var(--text)}
+.music.big~.lyp .lywin{height:110px}
 /* ---------- Phone / portrait ---------- */
 @media (max-width:900px),(orientation:portrait){
   .app{height:auto;min-height:100vh;grid-template-columns:1fr;grid-template-rows:none;grid-template-areas:"head" "music" "main" "ac"}
@@ -352,9 +327,6 @@ button:active{transform:scale(.94);transition-duration:.08s}
   .lights{grid-template-columns:repeat(2,minmax(0,1fr))}
   .ac{min-height:560px}
   .clock{font-size:42px}
-  .np{grid-template-columns:1fr;grid-template-rows:auto 1fr;gap:20px;padding:64px 22px 24px}
-  .npart{max-width:150px}
-  .ly{font-size:26px}
   .hleft{flex-direction:column;align-items:flex-start;gap:6px}
   .greet{font-size:18px}
 }
@@ -381,6 +353,7 @@ button:active{transform:scale(.94);transition-duration:.08s}
     <div class="vrow" id="vrow"><span id="vIco"></span><div class="vol" id="vol"><div class="fill" id="volFill"></div></div></div>
     <button class="devbtn" id="devBtn"><span id="devIco"></span><span style="min-width:0"><div class="dl">Playing on</div><div class="dn" id="devName">Choose a device</div></span></button>
   </section>
+  <section class="lyp glass" id="lyp"><div class="lywin"><div class="lylist" id="lyList"></div></div></section>
   <section class="wx glass tapcard" id="wx">
     <div class="wxnow"><div><div class="wxt" id="wxT">--°</div><div class="wxc" id="wxC">Weather</div></div><div class="wxic" id="wxIc"></div></div>
     <div class="lab hlab" style="font-size:11px;margin-top:auto">Next hours</div>
@@ -432,20 +405,6 @@ button:active{transform:scale(.94);transition-duration:.08s}
 <div class="sheet glass" id="sheet"><button class="close" id="sheetClose" aria-label="Close"></button><div id="sheetBody"></div></div>
 <div class="idle" id="idle"><div class="ig" id="iGreet"></div><div class="ic" id="iClock"></div><div class="id" id="iDate"></div><div class="is" id="iSum"></div></div>
 <div class="toast" id="toast"></div>
-<div class="np" id="np">
-  <div class="npbg" id="npBg"><div class="npbg2"></div></div>
-  <button class="npclose" id="npClose" aria-label="Close"></button>
-  <div class="npleft">
-    <div class="npart" id="npArt"></div>
-    <div><div class="npt" id="npTitle"></div><div class="npa" id="npArtist" style="margin-top:4px"></div></div>
-    <div><div class="prog" id="npProg"><div class="fill" id="npProgFill"></div></div><div class="times"><span id="npPos">0:00</span><span id="npDur">0:00</span></div></div>
-    <div class="mctl"><button id="npShuf"></button><button class="mid" id="npPrev"></button><button class="big" id="npPlay"></button><button class="mid" id="npNext"></button><button id="npRep"></button></div>
-    <div class="vrow"><span id="npVIco"></span><div class="vol" id="npVol"><div class="fill" id="npVolFill"></div></div></div>
-    <button class="devbtn" id="npDev"><span id="npDevIco"></span><span style="min-width:0"><div class="dl">Playing on</div><div class="dn" id="npDevName"></div></span></button>
-  </div>
-  <div class="lyr" id="lyr"><div class="lyrin" id="lyrIn"></div><div class="lymsg" id="lyMsg"></div></div>
-</div>
-
 <script>
 /* =====================================================================
    SETTINGS — entity IDs come from Home Assistant (Settings → Entities).
@@ -805,27 +764,30 @@ function roomSVG(p, fit){
     <linearGradient id="${p}floor" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#26221d"/><stop offset="1" stop-color="#15130f"/></linearGradient>
     <linearGradient id="${p}oak" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9a7a50"/><stop offset="1" stop-color="#6e5536"/></linearGradient>
     ${glow("gC1")}${glow("gC2")}${glow("gS")}${glow("gB")}${pool("pB")}${pool("pS")}
-    <filter id="${p}soft"><feGaussianBlur stdDeviation="14"/></filter><filter id="${p}wide" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="28"/></filter>
+    <radialGradient id="${p}rC1" cx=".5" cy="0" r=".9"><stop offset="0" stop-color="#fff" stop-opacity=".6"/><stop offset=".45" stop-color="#fff" stop-opacity=".18"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+    <radialGradient id="${p}rC2" cx=".5" cy="0" r=".9"><stop offset="0" stop-color="#fff" stop-opacity=".6"/><stop offset=".45" stop-color="#fff" stop-opacity=".18"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+    <clipPath id="${p}below"><rect x="0" y="399" width="1600" height="601"/></clipPath>
+    <radialGradient id="${p}rS" cx=".5" cy="0" r=".9"><stop offset="0" stop-color="#fff" stop-opacity=".55"/><stop offset=".5" stop-color="#fff" stop-opacity=".15"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
     <radialGradient id="${p}vig" cx=".5" cy=".45" r=".8"><stop offset=".6" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".55"/></radialGradient>
   </defs>
   <rect width="1600" height="1000" fill="${u("wall")}"/>
   <rect y="820" width="1600" height="180" fill="${u("floor")}"/>
   <path d="M0 820 H1600" stroke="#3a352e" stroke-width="3"/>
-  <rect width="1600" height="96" fill="#2f2b27"/><rect y="96" width="1600" height="8" fill="#1a1815"/>
-  <g class="lg" data-l="0"><rect x="40" y="104" width="740" height="430" fill="${u("gC1")}" filter="${u("wide")}"/><rect x="20" y="98" width="760" height="6" rx="3" fill="currentColor" filter="${u("soft")}"/></g>
-  <g class="lg" data-l="1"><rect x="820" y="104" width="740" height="430" fill="${u("gC2")}" filter="${u("wide")}"/><rect x="820" y="98" width="760" height="6" rx="3" fill="currentColor" filter="${u("soft")}"/></g>
+  <g class="lg" data-l="0"><ellipse cx="400" cy="104" rx="460" ry="420" fill="${u("rC1")}"/><rect x="20" y="95" width="760" height="12" rx="6" fill="currentColor" opacity=".35"/><rect x="20" y="98" width="760" height="5" rx="2.5" fill="currentColor"/></g>
+  <g class="lg" data-l="1"><ellipse cx="1200" cy="104" rx="460" ry="420" fill="${u("rC2")}"/><rect x="820" y="95" width="760" height="12" rx="6" fill="currentColor" opacity=".35"/><rect x="820" y="98" width="760" height="5" rx="2.5" fill="currentColor"/></g>
+  <rect width="1600" height="96" fill="#2f2b27"/><rect y="96" width="1600" height="3" fill="#1a1815"/>
   <rect x="0" y="104" width="250" height="716" fill="#36322d"/><path d="M125 104 V820 M0 300 H250" stroke="#26231f" stroke-width="4"/>
   <path d="M112 520 v60 M138 520 v60 M112 210 v40 M138 210 v40" stroke="#121110" stroke-width="6" stroke-linecap="round"/>
   <g class="acu"><rect x="980" y="150" width="330" height="72" rx="14" fill="#45413c"/><path d="M995 205 H1295" stroke="#2c2925" stroke-width="3"/><circle class="acled" cx="1285" cy="172" r="5" fill="#5ee08a" opacity="0"/></g>
   <rect x="420" y="250" width="420" height="300" rx="6" fill="#0b0b0a"/>
   <g stroke="#26231f" stroke-width="5">${[1, 2, 3, 4, 5, 6, 7].map(i => `<path d="M${420 + i * 52.5} 250 V550"/>`).join("")}<path d="M420 400 H840"/><path d="M560 250 V550 M700 250 V550" stroke-width="10"/></g>
-  <g class="lg" data-l="2"><ellipse cx="560" cy="815" rx="420" ry="80" fill="${u("pB")}"/><rect x="262" y="772" width="596" height="50" fill="${u("gB")}" filter="${u("soft")}"/><rect x="275" y="771" width="570" height="4" rx="2" fill="currentColor"/></g>
+  <g class="lg" data-l="2"><ellipse cx="560" cy="815" rx="420" ry="80" fill="${u("pB")}"/><rect x="262" y="772" width="596" height="14" rx="7" fill="currentColor" opacity=".3"/><rect x="275" y="771" width="570" height="4" rx="2" fill="currentColor"/></g>
   <rect x="300" y="500" width="520" height="190" rx="18" fill="#3a3733"/>
   <path d="${Array.from({ length: 10 }, (_, i) => `M${330 + i * 50} 520 V680`).join(" ")}" stroke="#312e2a" stroke-width="3"/>
   <rect x="270" y="650" width="580" height="74" rx="14" fill="#cfcac2" opacity=".55"/>
   <rect x="330" y="618" width="170" height="44" rx="20" fill="#dcd7cf" opacity=".6"/><rect x="520" y="618" width="170" height="44" rx="20" fill="#dcd7cf" opacity=".6"/>
   <rect x="262" y="718" width="596" height="56" rx="10" fill="#2a2825"/>
-  <g class="lg" data-l="3"><rect x="1010" y="398" width="500" height="250" fill="${u("gS")}" filter="${u("wide")}"/><ellipse cx="1270" cy="652" rx="270" ry="34" fill="${u("pS")}"/><rect x="1000" y="397" width="520" height="4" rx="2" fill="currentColor"/></g>
+  <g class="lg" data-l="3"><ellipse cx="1260" cy="398" rx="320" ry="270" fill="${u("rS")}" clip-path="${u("below")}"/><ellipse cx="1270" cy="652" rx="270" ry="34" fill="${u("pS")}"/><rect x="1000" y="397" width="520" height="4" rx="2" fill="currentColor"/></g>
   <rect x="990" y="380" width="540" height="18" rx="4" fill="${u("oak")}"/>
   <rect x="1170" y="520" width="200" height="118" rx="8" fill="#0c0c0b" stroke="#3b3834" stroke-width="4"/><rect x="1255" y="638" width="30" height="16" fill="#2c2a27"/>
   <rect x="1030" y="650" width="480" height="20" rx="4" fill="${u("oak")}"/>
@@ -858,7 +820,7 @@ function renderRoom(){
     const s = S[l.id], on = s && s.state === "on", col = lightColor(s);
     const op = on ? (0.3 + 0.7 * (s.attributes.brightness || 255) / 255).toFixed(2) : "0";
     document.querySelectorAll(`.lg[data-l="${i}"]`).forEach(g => { g.style.color = col; g.style.opacity = op; });
-    const ids = [["gC1"], ["gC2"], ["gB", "pB"], ["gS", "pS"]][i] || [];
+    const ids = [["rC1"], ["rC2"], ["pB"], ["rS", "pS"]][i] || [];
     ["bg", "mini"].forEach(p => ids.forEach(id => document.querySelectorAll(`#${p}${id} stop`).forEach(st => st.setAttribute("stop-color", col))));
     document.querySelectorAll(`.tag[data-tag="l${i}"]`).forEach(t => {
       t.classList.toggle("on", !!on); t.querySelector(".tn").textContent = l.name;
@@ -1084,85 +1046,66 @@ function renderMusic(){
   if (!drag.has("vol")) $("volFill").style.width = Math.round((a.volume_level ?? 0) * 100) + "%";
   $("devName").textContent = a.source || "Choose a device";
   $("devIco").innerHTML = icon(devIcon(a.source), 20);
-  renderNP(); renderProgress();
+  loadLyrics(a); renderProgress();
 }
-/* ---- Now playing + synced lyrics (from LRCLIB, a free community lyrics library) ---- */
-function renderNP(){
-  const id = mediaEntity(), s = id && S[id]; if (!s) return;
-  const a = s.attributes, url = $("art").dataset.u || "";
-  $("npTitle").textContent = a.media_title || "Nothing playing";
-  $("npArtist").textContent = a.media_artist || "";
-  if ($("npArt").dataset.u !== url) { $("npArt").dataset.u = url; $("npArt").style.backgroundImage = $("npBg").style.backgroundImage = url ? `url("${url}")` : ""; $("npArt").innerHTML = url ? "" : icon("music", 60, 1.2); }
-  $("np").classList.toggle("paused", s.state !== "playing");
-  $("npPlay").innerHTML = icon(s.state === "playing" ? "pause" : "play", 26);
-  $("npShuf").classList.toggle("act", !!a.shuffle); $("npRep").classList.toggle("act", a.repeat && a.repeat !== "off");
-  if (!drag.has("npVol")) $("npVolFill").style.width = Math.round((a.volume_level ?? 0) * 100) + "%";
-  $("npDevName").textContent = a.source || "Choose a device"; $("npDevIco").innerHTML = icon(devIcon(a.source), 20);
-  if ($("np").classList.contains("open")) loadLyrics(a);
-}
-let LY = { key: "", lines: [], plain: false, cur: -2 };
+/* ---- Lyrics pill: synced lyrics from LRCLIB (free community library), three lines at a time ---- */
+let LY = { key: "", lines: [], cur: -2 };
 function parseLRC(txt){
   const out = [];
   txt.split(/\r?\n/).forEach(row => {
     const times = [...row.matchAll(/\[(\d+):(\d+(?:\.\d+)?)\]/g)];
     const text = row.replace(/\[[^\]]*\]/g, "").trim();
-    times.forEach(m => out.push({ t: +m[1] * 60 + +m[2], text }));
+    times.forEach(m => out.push({ t: +m[1] * 60 + +m[2], text: text || "♪" }));
   });
   return out.sort((x, y) => x.t - y.t);
 }
 async function loadLyrics(a){
   const key = (a.media_title || "") + "|" + (a.media_artist || "");
-  if (!a.media_title || LY.key === key) return;
-  LY = { key, lines: [], plain: false, cur: -2 };
-  $("lyrIn").innerHTML = ""; $("lyrIn").style.transform = ""; $("lyr").classList.remove("plain"); $("lyMsg").textContent = "Finding lyrics…";
+  if (LY.key === key) return;
+  LY = { key, lines: [], cur: -2 };
+  $("lyp").classList.remove("show"); $("lyList").innerHTML = "";
+  if (!a.media_title) return;
   const artist = String(a.media_artist || "").split(/,|&| feat\.? /i)[0].trim();
-  const q = new URLSearchParams({ track_name: a.media_title, artist_name: artist });
-  if (a.media_album_name) q.set("album_name", a.media_album_name);
-  if (a.media_duration) q.set("duration", Math.round(a.media_duration));
   let hit = DEMO ? { syncedLyrics: DEMO_LRC } : null;
-  if (!DEMO) try { const r = await fetch("https://lrclib.net/api/get?" + q); if (r.ok) hit = await r.json(); } catch {}
-  if (!hit || (!hit.syncedLyrics && !hit.plainLyrics)) {
-    try { const r = await fetch("https://lrclib.net/api/search?" + new URLSearchParams({ track_name: a.media_title, artist_name: artist }));
-      if (r.ok) { const list = await r.json(); hit = list.find(x => x.syncedLyrics) || list.find(x => x.plainLyrics) || hit; } } catch {}
+  if (!DEMO) {
+    try {
+      const q = new URLSearchParams({ track_name: a.media_title, artist_name: artist });
+      if (a.media_album_name) q.set("album_name", a.media_album_name);
+      if (a.media_duration) q.set("duration", Math.round(a.media_duration));
+      const r = await fetch("https://lrclib.net/api/get?" + q); if (r.ok) hit = await r.json();
+      if (!hit || !hit.syncedLyrics) {
+        const r2 = await fetch("https://lrclib.net/api/search?" + new URLSearchParams({ track_name: a.media_title, artist_name: artist }));
+        if (r2.ok) hit = (await r2.json()).find(x => x.syncedLyrics) || null;
+      }
+    } catch { hit = null; }
   }
-  if (LY.key !== key) return;                      // song changed while loading
-  if (hit && hit.instrumental) return void ($("lyMsg").textContent = "Instrumental");
-  if (hit && hit.syncedLyrics) LY.lines = parseLRC(hit.syncedLyrics);
-  else if (hit && hit.plainLyrics) { LY.plain = true; LY.lines = hit.plainLyrics.split(/\n/).map(text => ({ t: null, text: text.trim() })); }
-  if (!LY.lines.length) return void ($("lyMsg").textContent = "No lyrics found for this song");
-  $("lyMsg").textContent = "";
-  $("lyr").classList.toggle("plain", LY.plain);
-  $("lyrIn").innerHTML = LY.lines.map((l, i) => `<button class="ly${l.text ? "" : " dots"}" data-i="${i}">${l.text ? esc(l.text) : "• • •"}</button>`).join("");
-  if (!LY.plain) $("lyrIn").querySelectorAll(".ly").forEach(b => b.onclick = () => {
-    const t = LY.lines[b.dataset.i].t; mOpt((st, at) => { at.media_position = t; at.media_position_updated_at = new Date().toISOString(); });
-    mcall("media_seek", { seek_position: Math.round(t) }); LY.cur = -2; syncLyrics();
-  });
+  if (LY.key !== key || !hit || !hit.syncedLyrics) return;      // no synced lyrics: the pill stays hidden
+  LY.lines = parseLRC(hit.syncedLyrics);
+  if (!LY.lines.length) return;
+  $("lyList").innerHTML = LY.lines.map(l => `<div class="lyl">${esc(l.text)}</div>`).join("");
+  $("lyp").classList.add("show");
   syncLyrics();
 }
 function syncLyrics(){
-  if (LY.plain || !LY.lines.length || !$("np").classList.contains("open")) return;
+  if (!LY.lines.length || document.hidden) return;
   const s = S[mediaEntity()]; if (!s) return;
-  const pos = position(s) + 0.35;
+  const pos = position(s) + 0.3;
   let i = -1; for (let k = 0; k < LY.lines.length; k++) { if (LY.lines[k].t <= pos) i = k; else break; }
-  if (i === LY.cur) return; LY.cur = i;
-  const els = $("lyrIn").children;
-  for (let k = 0; k < els.length; k++) { els[k].classList.toggle("cur", k === i); els[k].classList.toggle("near", Math.abs(k - i) === 1); }
-  const target = els[Math.max(i, 0)];
-  if (target) $("lyrIn").style.transform = `translateY(${-(target.offsetTop - $("lyr").clientHeight * .32)}px)`;
+  if (i === LY.cur) return;
+  const els = $("lyList").children;
+  if (els[LY.cur]) els[LY.cur].classList.remove("cur");
+  if (els[i]) els[i].classList.add("cur");
+  LY.cur = i;
+  const big = $("music").classList.contains("big"), row = 22, offset = big ? 2 : 1;   // current line sits 2nd (or 3rd when enlarged)
+  $("lyList").style.transform = `translateY(${-(Math.max(i, 0) - offset) * row}px)`;
 }
-setInterval(syncLyrics, 250);
-function openNP(){ renderNP(); const id = mediaEntity(); if (id && S[id]) loadLyrics(S[id].attributes); LY.cur = -2; $("np").classList.add("open"); setTimeout(syncLyrics, 60); }
-function closeNP(){ $("np").classList.remove("open"); }
+setInterval(syncLyrics, 400);
 
 function renderProgress(){
   const id = mediaEntity(), s = id && S[id]; if (!s || drag.has("prog")) return;
   const dur = s.attributes.media_duration || 0, p = position(s);
   $("progFill").style.width = dur ? (p / dur * 100).toFixed(2) + "%" : "0";
   $("tPos").textContent = mmss(p); $("tDur").textContent = dur ? "-" + mmss(dur - p) : "0:00";
-  if ($("np").classList.contains("open") && !drag.has("npProg")) {
-    $("npProgFill").style.width = dur ? (p / dur * 100).toFixed(2) + "%" : "0";
-    $("npPos").textContent = mmss(p); $("npDur").textContent = dur ? "-" + mmss(dur - p) : "0:00";
-  }
 }
 const drag = new Set();
 function bindBar(el, key, onDone, fill){
@@ -1412,14 +1355,14 @@ function openSettings(){
 let focus = "";
 const vt = fn => (document.startViewTransition && !matchMedia("(prefers-reduced-motion:reduce)").matches) ? document.startViewTransition(fn) : fn();
 function setFocus(f){
-  if (f === "music") { openNP(); f = ""; } else closeNP();
   vt(() => {
     focus = f;
     $("app").dataset.focus = f;
-    $("music").classList.toggle("slim", f === "wx");
+    $("music").classList.toggle("big", f === "music"); $("music").classList.toggle("slim", f === "wx");
+    $("wx").classList.toggle("slim", f === "music");
     $("wx").classList.toggle("big", f === "wx");
     $("ac").classList.toggle("big", f === "ac"); $("net").classList.toggle("slim", f === "ac");
-    renderWeather();
+    renderWeather(); LY.cur = -2; syncLyrics();
   });
 }
 ["music", "wx", "ac"].forEach(id => $(id).addEventListener("click", e => {
@@ -1463,7 +1406,7 @@ function renderIdleSummary(){
   const m = mediaEntity() && S[mediaEntity()];
   $("iSum").innerHTML = `<span>${on ? on + " light" + (on > 1 ? "s" : "") + " on" : "Lights off"}</span>${ac ? `<span>${ac.state === "off" ? "AC off" : "AC " + fmtT(ac.attributes.temperature) + "°"}</span>` : ""}${m && m.state === "playing" && m.attributes.media_title ? `<span>♪ ${esc(m.attributes.media_title)}</span>` : ""}`;
 }
-function sleep(){ closeSheet(); closeNP(); if (focus) setFocus(""); document.body.classList.remove("roommode"); roomFit(false); $("idle").classList.add("show"); }
+function sleep(){ closeSheet(); if (focus) setFocus(""); document.body.classList.remove("roommode"); roomFit(false); $("idle").classList.add("show"); }
 function wake(){ lastTouch = Date.now(); $("idle").classList.remove("show"); }
 ["pointerdown", "keydown"].forEach(ev => document.addEventListener(ev, () => { lastTouch = Date.now(); }, true));
 $("idle").addEventListener("pointerdown", e => { e.stopPropagation(); e.preventDefault(); wake(); });
@@ -1525,7 +1468,7 @@ function demoCall(domain, service, d){
 /* =====================================================================
    Auto-update: reload when a newer version is installed
    ===================================================================== */
-const VERSION = "2026.11.19.7";
+const VERSION = "2026.11.19.8";
 if (!DEMO) setInterval(async () => {
   try { const v = await (await fetch("version.json?t=" + Date.now(), { cache: "no-store" })).json();
     if (v.version && v.version !== VERSION && !sheetMode) location.reload(); } catch {}
@@ -1553,18 +1496,11 @@ $("roomOpen").innerHTML = icon("expand", 18); $("roomExit").innerHTML = icon("le
 const roomFit = full => { const sv = $("room").querySelector("svg"); if (sv) sv.setAttribute("preserveAspectRatio", full ? "xMidYMid meet" : "xMidYMid slice"); };
 $("roomOpen").onclick = () => { closeSheet(); vt(() => { roomFit(true); document.body.classList.add("roommode"); }); };
 $("roomExit").onclick = () => vt(() => { roomFit(false); document.body.classList.remove("roommode"); });
-// Now playing controls
-$("npClose").innerHTML = icon("down", 20); $("npClose").onclick = () => setFocus("");
-$("npPrev").innerHTML = icon("prev", 22); $("npNext").innerHTML = icon("next", 22); $("npShuf").innerHTML = icon("shuffle", 20); $("npRep").innerHTML = icon("repeat", 20); $("npVIco").innerHTML = icon("vol", 18);
-$("npPlay").onclick = () => $("mPlay").click(); $("npPrev").onclick = () => $("mPrev").click(); $("npNext").onclick = () => $("mNext").click();
-$("npShuf").onclick = () => $("mShuf").click(); $("npRep").onclick = () => $("mRep").click(); $("npDev").onclick = openDevices;
-bindBar($("npVol"), "npVol", p => { const v = Math.round(p * 100) / 100; mOpt((st, at) => at.volume_level = v); mcall("volume_set", { volume_level: v }); }, $("npVolFill"));
-bindBar($("npProg"), "npProg", p => { const s = S[mediaEntity()]; if (s && s.attributes.media_duration) { const v = Math.round(p * s.attributes.media_duration); mOpt((st, at) => { at.media_position = v; at.media_position_updated_at = new Date().toISOString(); }); mcall("media_seek", { seek_position: v }); LY.cur = -2; } }, $("npProgFill"));
 $("mMini").onclick = playPause;
 $("offIco").innerHTML = icon("power", 20); $("offAll").onclick = everythingOff;
 $("netRun").innerHTML = icon("refresh", 16); $("netRun").onclick = runSpeedtest;
 bindBar($("vol"), "vol", p => { const v = Math.round(p * 100) / 100; mOpt((st, at) => at.volume_level = v); mcall("volume_set", { volume_level: v }); }, $("volFill"));
-bindBar($("prog"), "prog", p => { const s = S[mediaEntity()]; if (s && s.attributes.media_duration) { const v = Math.round(p * s.attributes.media_duration); mOpt((st, at) => { at.media_position = v; at.media_position_updated_at = new Date().toISOString(); }); mcall("media_seek", { seek_position: v }); } }, $("progFill"));
+bindBar($("prog"), "prog", p => { const s = S[mediaEntity()]; if (s && s.attributes.media_duration) { const v = Math.round(p * s.attributes.media_duration); mOpt((st, at) => { at.media_position = v; at.media_position_updated_at = new Date().toISOString(); }); mcall("media_seek", { seek_position: v }); LY.cur = -2; } }, $("progFill"));
 window.addEventListener("resize", () => buildScenes());
 buildLights();
 document.querySelectorAll(".app .glass").forEach((el, i) => el.style.setProperty("--d", (i * 0.04).toFixed(2) + "s"));
