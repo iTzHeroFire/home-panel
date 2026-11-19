@@ -59,6 +59,24 @@ body.roommode .roomclock{display:block}
 .roomcard{position:relative;flex:1 1 auto;min-height:140px;overflow:hidden;padding:0}
 .roomcard #roomMini{position:absolute;inset:0}
 .roomcard #roomMini svg{width:100%;height:100%}
+.rtabs{position:absolute;left:12px;top:12px;z-index:3;display:flex;gap:2px;padding:3px;border-radius:16px;background:rgba(20,18,16,.6);border:1px solid rgba(255,255,255,.12);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.rtabs button{height:30px;padding:0 12px;border-radius:13px;font-size:13px;font-weight:600;color:var(--muted)}
+.rtabs button.sel{background:var(--accent);color:var(--accent-ink)}
+.camview{position:absolute;inset:0;background:#0b0a09;display:flex;align-items:center;justify-content:center}
+.camview[hidden]{display:none}
+.camview img{width:100%;height:100%;object-fit:cover;display:block}
+.camview .camempty{position:absolute;inset:0;display:grid;place-items:center;text-align:center;color:var(--muted);font-size:14px;padding:20px;line-height:1.5}
+.camlabel{position:absolute;left:12px;bottom:12px;z-index:2;display:flex;align-items:center;gap:8px;height:30px;padding:0 12px;border-radius:15px;font-size:12px;font-weight:600;background:rgba(20,18,16,.6);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.camlabel .rec{width:8px;height:8px;border-radius:4px;background:#ff5c5c;box-shadow:0 0 10px #ff5c5c;display:none}
+.camlabel.live .rec{display:block;animation:breathe 1.6s ease-in-out infinite}
+.camctl{position:absolute;right:12px;bottom:12px;z-index:2;display:flex;gap:6px}
+.camctl button{height:34px;padding:0 12px;border-radius:17px;display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;background:rgba(20,18,16,.6);border:1px solid rgba(255,255,255,.12);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.camctl button.on{background:var(--accent);color:var(--accent-ink)}
+.camview.private img{filter:blur(24px) brightness(.4)}
+.camfull{position:fixed;inset:0;z-index:25;background:#000;display:none}
+.camfull.open{display:block}
+.camfull img{width:100%;height:100%;object-fit:contain}
+.camfull .roomexit{display:flex}
 .roomcard .rcx{position:absolute;right:12px;top:12px;width:40px;height:40px;border-radius:20px;display:grid;place-items:center;background:rgba(20,18,16,.6);border:1px solid rgba(255,255,255,.12);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
 html:has(body.has-room){background:#0d0c0b}
 body.has-room{background:transparent}
@@ -487,7 +505,12 @@ body.isnight .night{opacity:1}
   <main class="main">
     <div class="sechead" id="sHead"><span class="lab">Scenes</span><button class="link" id="editBtn">Edit</button></div>
     <section class="scenes" id="scenes"></section>
-    <section class="roomcard glass" id="roomCard"><div id="roomMini"></div><button class="rcx" id="roomOpen" aria-label="Full-screen room"></button></section>
+    <section class="roomcard glass" id="roomCard"><div id="roomMini"></div>
+      <div class="camview" id="camView" hidden><img id="camImg" alt="" draggable="false"><div class="camempty" id="camEmpty"></div>
+        <div class="camlabel" id="camLabel"><span class="rec"></span><span id="camWhen"></span></div>
+        <div class="camctl"><button id="camPriv" aria-label="Privacy"></button><button id="camSnap" aria-label="Take a photo now"></button><button id="camLive"></button></div></div>
+      <div class="rtabs"><button data-v="cam">Camera</button><button data-v="room">Room</button></div>
+      <button class="rcx" id="roomOpen" aria-label="Full screen"></button></section>
     <div class="sechead" id="lHead"><span class="lab">Lights</span><span style="display:flex;gap:4px"><button class="link" id="allLights">All lights</button><button class="link" id="allOff">All off</button></span></div>
     <section class="lights" id="lights"></section>
   </main>
@@ -516,6 +539,7 @@ body.isnight .night{opacity:1}
 </div>
 
 <button class="roomexit glass" id="roomExit"></button><div class="roomclock" id="roomClock"></div>
+<div class="camfull" id="camFull"><img id="camFullImg" alt=""><button class="roomexit glass" id="camFullExit"></button></div>
 <div class="night"></div>
 <div class="scrim" id="scrim"></div>
 <div class="sheet glass" id="sheet"><button class="close" id="sheetClose" aria-label="Close"></button><div id="sheetBody"></div></div>
@@ -537,6 +561,7 @@ const CONFIG = {
   climate: "climate.panasonic_ac_panasonic_ac",   // if this one disappears, the panel uses any other AC it finds
   climateName: "Air conditioner",
   media: "auto",        // "auto" picks the Spotify player
+  camera: "auto",       // "auto" picks the iPad camera (MJPEG) entity
   weather: "auto",
   speedtest: "auto",   // uses the Speedtest.net integration sensors
   motionSensor: "",     // e.g. "binary_sensor.panel_motion" — wakes the screen
@@ -622,6 +647,9 @@ const P = {
   watch:'<rect x="6" y="6" width="12" height="12" rx="3.5"/><path d="M9 6V3h6v3M9 18v3h6v-3"/>',
   expand:'<path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"/>',
   down:'<path d="M6 9l6 6 6-6"/>',
+  eye:'<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+  eyeoff:'<path d="M3 3l18 18M10.6 5.1A10 10 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3.2 4.1M6.6 6.6A17 17 0 0 0 2 12s3.5 7 10 7a9.6 9.6 0 0 0 4.4-1M9.9 9.9a3 3 0 0 0 4.2 4.2"/>',
+  camera:'<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>',
   refresh:'<path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/>',
 };
 const SCENE_ICONS = ["sofa", "target", "film", "moon", "sun", "book", "coffee", "game", "bed", "sparkle", "pray", "snow", "heart", "music", "power", "bulb"];
@@ -700,7 +728,12 @@ async function tokenRequest(params){
 function signIn(){
   location.href = `${ORIGIN}/auth/authorize?response_type=code&client_id=${encodeURIComponent(CLIENT_ID)}&redirect_uri=${encodeURIComponent(REDIRECT)}&state=p`;
 }
+/* Inside the Home Assistant app (a "Webpage" dashboard) the panel reuses the app's login. */
+function parentAuth(){ try { const ha = window.parent !== window && window.parent.document.querySelector("home-assistant"); return ha && ha.hass && ha.hass.auth || null; } catch { return null; } }
+const inHA = () => !!parentAuth();
 async function getToken(force){
+  const pa = parentAuth();
+  if (pa) { if (force || pa.expired) await pa.refreshAccessToken(); return pa.accessToken; }
   const q = new URLSearchParams(location.search);
   if (q.get("code")) {
     const t = await tokenRequest({ grant_type: "authorization_code", code: q.get("code") });
@@ -735,7 +768,7 @@ async function connect(force){
       S = {}; states.forEach(s => S[s.entity_id] = s);
       pickClimate();
       await send({ type: "subscribe_events", event_type: "state_changed" });
-      subscribeForecast(); loadOokla(); loadTrend();
+      subscribeForecast(); loadOokla(); loadTrend(); ensureCamera(); loadSnapshotTime().then(() => renderCamera(true));
       await loadScenes();
       setConn(true); render();
     }
@@ -908,7 +941,7 @@ async function syncScripts(force){
    ===================================================================== */
 let renderQueued = false;
 function scheduleRender(){ if (!renderQueued) { renderQueued = true; requestAnimationFrame(() => { renderQueued = false; render(); }); } }
-function render(){ renderSceneActive(); renderSummary(); renderLights(); renderAC(); renderMusic(); renderWeather(); renderNet(); renderBatteries(); renderRoom(); renderIdleSummary(); }
+function render(){ if (roomView === "cam") renderCamera(false); renderSceneActive(); renderSummary(); renderLights(); renderAC(); renderMusic(); renderWeather(); renderNet(); renderBatteries(); renderRoom(); renderIdleSummary(); }
 
 /* ---- One-line summary under the greeting ---- */
 let todayStr = "";
@@ -1672,6 +1705,106 @@ function openSettings(){
 }
 
 /* =====================================================================
+   Camera (the iPad's own front camera, via the Home Assistant app's Camera Stream sensor)
+   · a photo is saved every hour by a Home Assistant automation (skipped while Privacy is on)
+   · "Live" streams for up to 2 minutes, then goes back to the last photo to save battery/heat
+   ===================================================================== */
+const SNAP_FILE = "home-camera-latest.jpg", PRIV = "input_boolean.camera_privacy";
+let roomView = store.get("roomView", "cam"), camLiveUntil = 0, camLiveT = null;
+function cameraEntity(){
+  if (CONFIG.camera !== "auto") return CONFIG.camera;
+  const ids = Object.keys(S).filter(k => k.startsWith("camera."));
+  return ids.find(k => /ipad|tablet|panel/.test(k)) || ids[0] || null;
+}
+const camPrivate = () => DEMO ? !!store.get("demoPriv", false) : !!S[PRIV] && S[PRIV].state === "on";
+function camUrl(kind){
+  const id = cameraEntity(), s = id && S[id]; if (!s) return "";
+  return `${ORIGIN}/api/${kind}/${id}?token=${encodeURIComponent(s.attributes.access_token || "")}&t=${Date.now()}`;
+}
+function setRoomView(v){
+  roomView = v; store.set("roomView", v);
+  document.querySelectorAll(".rtabs button").forEach(b => b.classList.toggle("sel", b.dataset.v === v));
+  $("camView").hidden = v !== "cam"; $("roomMini").style.visibility = v === "cam" ? "hidden" : "";
+  if (v !== "cam") stopLive();
+  renderCamera(true);
+}
+let snapTime = 0;
+async function loadSnapshotTime(){
+  if (DEMO) { snapTime = Date.now() - 23 * 60000; return; }
+  try { const r = await fetch(`${ORIGIN}/local/${SNAP_FILE}?t=${Date.now()}`, { method: "HEAD", cache: "no-store" });
+    snapTime = r.ok ? Date.parse(r.headers.get("last-modified")) || 0 : 0; } catch { snapTime = 0; }
+}
+function renderCamera(reload){
+  if (roomView !== "cam") return;
+  const id = cameraEntity(), live = Date.now() < camLiveUntil, priv = camPrivate();
+  $("camView").classList.toggle("private", priv);
+  $("camPriv").classList.toggle("on", priv);
+  $("camPriv").innerHTML = icon(priv ? "eyeoff" : "eye", 16) + (priv ? "Private" : "");
+  $("camLive").classList.toggle("on", live);
+  $("camLive").innerHTML = live ? icon("pause", 14) + "Stop" : icon("play", 14) + "Live";
+  $("camLabel").classList.toggle("live", live);
+  if (!id && !DEMO) {
+    $("camImg").removeAttribute("src"); $("camEmpty").textContent = "Camera not set up yet — turn on the iPad's Camera Stream in the Home Assistant app.";
+    $("camLabel").style.display = "none"; return;
+  }
+  $("camLabel").style.display = "";
+  $("camEmpty").textContent = "";
+  $("camWhen").textContent = priv ? "Privacy on — no photos or live view" : live ? "Live" : snapTime ? "Photo " + ago(new Date(snapTime).toISOString()) : "No photo yet — tap the camera button";
+  if (reload && !live) {
+    const src = DEMO ? "" : `${ORIGIN}/local/${SNAP_FILE}?t=${snapTime || Date.now()}`;
+    if (src) $("camImg").src = src; else $("camImg").removeAttribute("src");
+    $("camImg").onerror = () => { $("camImg").removeAttribute("src"); };
+  }
+}
+function startLive(full){
+  if (camPrivate()) return toast("Turn off Privacy to view the camera");
+  const url = camUrl("camera_proxy_stream"); if (!url && !DEMO) return toast("Camera not set up yet");
+  camLiveUntil = Date.now() + 120000;
+  if (url) { (full ? $("camFullImg") : $("camImg")).src = url; }
+  clearTimeout(camLiveT); camLiveT = setTimeout(stopLive, 120000);
+  renderCamera(false);
+}
+function stopLive(){
+  clearTimeout(camLiveT); const was = Date.now() < camLiveUntil; camLiveUntil = 0;
+  $("camFullImg").removeAttribute("src");          // closing the stream lets the iPad camera rest
+  if (was) renderCamera(true);
+}
+async function takePhoto(){
+  if (camPrivate()) return toast("Privacy is on");
+  const id = cameraEntity(); if (!id) return toast("Camera not set up yet");
+  toast("Taking a photo…");
+  await call("camera", "snapshot", { entity_id: id, filename: "/config/www/" + SNAP_FILE });
+  setTimeout(async () => { await loadSnapshotTime(); renderCamera(true); }, 2500);
+}
+function togglePrivacy(){
+  if (DEMO) { store.set("demoPriv", !camPrivate()); renderCamera(true); return; }
+  if (!S[PRIV]) return toast("Privacy switch is still being set up");
+  const on = !camPrivate(); S[PRIV].state = on ? "on" : "off";
+  if (on) stopLive();
+  call("input_boolean", on ? "turn_on" : "turn_off", { entity_id: PRIV }); renderCamera(true);
+}
+function openCamFull(){ $("camFull").classList.add("open"); startLive(true); }
+function closeCamFull(){ $("camFull").classList.remove("open"); stopLive(); }
+/* Created in Home Assistant by the panel: the Privacy switch and the hourly photo automation. */
+async function ensureCamera(){
+  if (DEMO) return;
+  try { if (!S[PRIV]) await send({ type: "input_boolean/create", name: "Camera privacy", icon: "mdi:cctv-off" }); } catch (e) { console.warn("privacy", e); }
+  const exists = Object.keys(S).some(k => k.startsWith("automation.") && S[k].attributes.id === "panel_camera_hourly");
+  const cam = cameraEntity(); if (exists || !cam) return;
+  try {
+    await api("POST", "/api/config/automation/config/panel_camera_hourly", {
+      alias: "Panel · Hourly room photo", description: "Created by the wall panel",
+      triggers: [{ trigger: "time_pattern", minutes: 0 }],
+      conditions: [{ condition: "state", entity_id: PRIV, state: "off" }, { condition: "not", conditions: [{ condition: "state", entity_id: cam, state: "unavailable" }] }],
+      actions: [
+        { action: "camera.snapshot", target: { entity_id: cam }, data: { filename: "/config/www/" + SNAP_FILE } },
+        { action: "camera.snapshot", target: { entity_id: cam }, data: { filename: "/config/www/home-camera-h{{ now().hour }}.jpg" }, continue_on_error: true }],
+      mode: "single" });
+  } catch (e) { console.warn("camera automation", e); }
+}
+setInterval(async () => { if (roomView === "cam" && Date.now() >= camLiveUntil) { await loadSnapshotTime(); renderCamera(true); } }, 5 * 60000);
+
+/* =====================================================================
    Tap a widget to enlarge it (the others in its column shrink)
    ===================================================================== */
 let focus = "";
@@ -1733,14 +1866,14 @@ function tick(){
   const greet = CONFIG.name ? `${g}, ${CONFIG.name}` : g;
   if ($("greet").textContent !== greet) { $("greet").textContent = greet; $("iGreet").textContent = greet; }
   renderProgress();
-  if (CONFIG.idleSeconds && !editing && !sheetMode && !$("idle").classList.contains("show") && Date.now() - lastTouch > CONFIG.idleSeconds * 1000) sleep();
+  if (CONFIG.idleSeconds && !inHA() && !editing && !sheetMode && !$("idle").classList.contains("show") && Date.now() - lastTouch > CONFIG.idleSeconds * 1000) sleep();
 }
 function renderIdleSummary(){
   const on = CONFIG.lights.filter(l => S[l.id] && S[l.id].state === "on").length, ac = S[CONFIG.climate];
   const m = mediaEntity() && S[mediaEntity()];
   $("iSum").innerHTML = `<span>${on ? on + " light" + (on > 1 ? "s" : "") + " on" : "Lights off"}</span>${ac ? `<span>${ac.state === "off" ? "AC off" : "AC " + fmtT(ac.attributes.temperature) + "°"}</span>` : ""}${m && m.state === "playing" && m.attributes.media_title ? `<span>♪ ${esc(m.attributes.media_title)}</span>` : ""}`;
 }
-function sleep(){ closeSheet(); clearTimeout(lyTimer); if (focus) setFocus(""); document.body.classList.remove("roommode"); roomFit(false); $("idle").classList.add("show"); }
+function sleep(){ closeSheet(); stopLive(); $("camFull").classList.remove("open"); clearTimeout(lyTimer); if (focus) setFocus(""); document.body.classList.remove("roommode"); roomFit(false); $("idle").classList.add("show"); }
 function wake(){ lastTouch = Date.now(); if ($("idle").classList.contains("show")) swallowUntil = Math.max(swallowUntil === Infinity ? 0 : swallowUntil, Date.now() + 600); $("idle").classList.remove("show"); scheduleLyrics(); }
 ["pointerdown", "keydown"].forEach(ev => document.addEventListener(ev, () => { lastTouch = Date.now(); }, true));
 /* Waking: the first touch only wakes the screen. The overlay stays until the finger lifts, and any tap
@@ -1810,7 +1943,7 @@ function demoCall(domain, service, d){
 /* =====================================================================
    Auto-update: reload when a newer version is installed
    ===================================================================== */
-const VERSION = "2026.11.19.17";
+const VERSION = "2026.11.19.18";
 if (!DEMO) setInterval(async () => {
   try { const v = await (await fetch("version.json?t=" + Date.now(), { cache: "no-store" })).json();
     if (v.version && v.version !== VERSION && !sheetMode) location.reload(); } catch {}
@@ -1838,7 +1971,12 @@ $("mRep").onclick = () => { const s = S[mediaEntity()]; if (!s) return; const or
 $("devBtn").onclick = openDevices;
 $("roomOpen").innerHTML = icon("expand", 18); $("roomExit").innerHTML = icon("left", 18) + "Controls";
 const roomFit = full => { const sv = $("room").querySelector("svg"); if (sv) sv.setAttribute("preserveAspectRatio", full ? "xMidYMid meet" : "xMidYMid slice"); };
-$("roomOpen").onclick = e => { e.stopPropagation(); closeSheet(); roomFit(true); document.body.classList.add("roommode"); };
+$("roomOpen").onclick = e => { e.stopPropagation(); closeSheet(); if (roomView === "cam") return openCamFull(); roomFit(true); document.body.classList.add("roommode"); };
+document.querySelectorAll(".rtabs button").forEach(b => b.onclick = e => { e.stopPropagation(); setRoomView(b.dataset.v); });
+$("camLive").onclick = e => { e.stopPropagation(); Date.now() < camLiveUntil ? stopLive() : startLive(false); };
+$("camSnap").innerHTML = icon("camera", 16); $("camSnap").onclick = e => { e.stopPropagation(); takePhoto(); };
+$("camPriv").onclick = e => { e.stopPropagation(); togglePrivacy(); };
+$("camFullExit").innerHTML = icon("left", 18) + "Back"; $("camFullExit").onclick = closeCamFull;
 $("roomExit").onclick = () => { roomFit(false); document.body.classList.remove("roommode"); };
 $("mMini").onclick = playPause;
 $("offIco").innerHTML = icon("power", 20); $("offAll").onclick = everythingOff;
@@ -1846,7 +1984,7 @@ $("netRun").innerHTML = icon("refresh", 16); $("netRun").onclick = runSpeedtest;
 bindBar($("vol"), "vol", p => { const v = Math.round(p * 100) / 100; mOpt((st, at) => at.volume_level = v); mcall("volume_set", { volume_level: v }); }, $("volFill"));
 bindBar($("prog"), "prog", p => { const s = S[mediaEntity()]; if (s && s.attributes.media_duration) { const v = Math.round(p * s.attributes.media_duration); mOpt((st, at) => { at.media_position = v; at.media_position_updated_at = new Date().toISOString(); }); mcall("media_seek", { seek_position: v }); LY.cur = -1; setTimeout(scheduleLyrics, 50); } }, $("progFill"));
 window.addEventListener("resize", () => buildScenes());
-buildLights();
+buildLights(); setRoomView(roomView);
 document.querySelectorAll(".app .glass").forEach((el, i) => el.style.setProperty("--d", (i * 0.04).toFixed(2) + "s"));
 document.body.classList.add("intro"); setTimeout(() => document.body.classList.remove("intro"), 1600);
 tick(); setInterval(tick, 1000);
