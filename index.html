@@ -34,8 +34,11 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 input{font:inherit;color:inherit;-webkit-user-select:text;user-select:text}
 svg{display:block}
 .room{position:fixed;inset:0;z-index:-1;pointer-events:none;background:#0d0c0b}
+.room::after{content:"";position:absolute;inset:0;background:rgba(8,7,6,.42);pointer-events:none;transition:opacity .4s}
+body.roommode .room::after{opacity:0}
 .room svg{width:100%;height:100%;display:block}
 .room .lg,.roomcard .lg{transition:opacity 1.2s ease}
+.room .dark,.roomcard .dark{transition:opacity 1.2s ease}
 .tags .tag{opacity:0;transition:opacity .3s;pointer-events:none}
 .tags .tag rect{fill:rgba(20,18,16,.72);stroke:rgba(255,255,255,.14)}
 .tags .tag .tn{fill:#f5f5f7;font:600 19px var(--font)}
@@ -66,7 +69,7 @@ body.has-room .glass{--glass:rgba(22,20,18,.36)}
 .light.on{box-shadow:0 1px 0 rgba(255,255,255,.08) inset,0 30px 60px -28px rgba(0,0,0,.9),0 0 46px -14px var(--lc,#fff)}
 .ac:not(.off){box-shadow:0 1px 0 rgba(255,255,255,.08) inset,0 30px 60px -28px rgba(0,0,0,.9),0 0 60px -30px var(--accent)}
 .music.big .art{box-shadow:0 24px 50px -20px rgba(0,0,0,.9),0 0 70px -25px var(--accent)}
-.bat{gap:14px;padding:0 14px;font-variant-numeric:tabular-nums;font-size:14px}
+.bat{gap:10px;padding:0 12px;font-variant-numeric:tabular-nums;font-size:13px}
 .bat .bi{display:flex;align-items:center;gap:5px}
 .bat .bn{color:var(--muted)}
 .bat .bi.low{color:#ff8a80}
@@ -79,10 +82,12 @@ body.has-room .glass{--glass:rgba(22,20,18,.36)}
   grid-template-areas:"music head head" "music main ac";
   padding:calc(16px + env(safe-area-inset-top)) calc(18px + env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) calc(18px + env(safe-area-inset-left))}
 header{grid-area:head;display:flex;align-items:flex-end;justify-content:space-between;gap:12px;padding:0 4px}
-.hleft{display:flex;align-items:flex-end;gap:18px}
+.hleft{display:flex;align-items:flex-end;gap:18px;min-width:0;flex:1}
+.hleft>div:last-child{min-width:0}
+.hright{flex:none}
 .greet{font-size:22px;font-weight:600;letter-spacing:-.3px;white-space:nowrap}
 .clock{font-size:52px;font-weight:200;letter-spacing:-2px;line-height:.9;font-variant-numeric:tabular-nums}
-.date{color:var(--muted);font-size:15px;margin-top:4px;font-weight:500;white-space:nowrap}
+.date{color:var(--muted);font-size:15px;margin-top:4px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hright{display:flex;align-items:center;gap:8px}
 .pill{display:flex;align-items:center;gap:8px;height:42px;padding:0 15px;border-radius:21px;font-size:15px;font-weight:500}
 .iconbtn{width:42px;height:42px;border-radius:21px;display:grid;place-items:center}
@@ -180,7 +185,7 @@ header{grid-area:head;display:flex;align-items:flex-end;justify-content:space-be
 
 /* ---------- Lights ---------- */
 .lights{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;flex:none}
-.light{padding:10px 12px 12px;display:flex;flex-direction:column;text-align:left;transition:background .3s,border-color .3s;touch-action:none;position:relative}
+.light{padding:10px 12px 12px;display:flex;flex-direction:column;text-align:left;transition:background .3s,border-color .3s,transform .3s var(--spring,ease);touch-action:none;position:relative}
 .light.on{background:var(--glass-hi);border-color:rgba(255,255,255,.14)}
 .light .art2{height:62px;margin:0 -4px 6px;color:var(--lc,#fff)}
 .light .ln{font-size:15px;font-weight:600}
@@ -327,6 +332,28 @@ button:active{transform:scale(.94);transition-duration:.08s}
 .lyp.big .lysrc{display:block}
 .side .wx:not(.big):not(.slim).compact{flex:0 0 auto}
 .ampm{font-size:.38em;font-weight:500;letter-spacing:0;margin-left:4px;color:var(--muted)}
+/* ---------- Polish ---------- */
+.scene.active{border-color:color-mix(in srgb,var(--accent) 55%,transparent);background:color-mix(in srgb,var(--accent) 14%,var(--glass))}
+.scene.active .sic{background:var(--accent);color:var(--accent-ink)}
+.light .ls b{color:var(--text);font-weight:600}
+.light.dragging{transform:scale(1.02)}
+.light.dragging .bar{height:6px;bottom:7px}
+.acinfo{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;font-size:12px;color:var(--muted)}
+.acinfo svg{flex:1;height:26px;min-width:0}
+.acinfo .tr{stroke:var(--accent);stroke-width:1.6;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.acinfo .ta{fill:color-mix(in srgb,var(--accent) 16%,transparent);stroke:none}
+.acinfo .ao{white-space:nowrap}
+.bat{cursor:pointer}
+.batlist{display:flex;flex-direction:column;gap:8px}
+.batrow{display:flex;align-items:center;gap:14px;padding:12px 14px;border-radius:16px;background:rgba(255,255,255,.06)}
+.batrow .bnm{flex:1;font-weight:600}
+.batrow .bbar{width:90px;height:8px;border-radius:4px;background:rgba(255,255,255,.1);overflow:hidden}
+.batrow .bbar i{display:block;height:100%;border-radius:4px;background:#5ee08a}
+.batrow.low .bbar i{background:#ff7b7b}
+.night{position:fixed;inset:0;z-index:19;pointer-events:none;background:rgba(40,18,0,.42);opacity:0;transition:opacity 3s}
+body.isnight .night{opacity:1}
+.cpick{width:100%;height:46px;border:0;border-radius:14px;padding:0;background:none;cursor:pointer}
+.cpick::-webkit-color-swatch-wrapper{padding:0}.cpick::-webkit-color-swatch{border:0;border-radius:14px}
 /* ---------- Phone / portrait ---------- */
 @media (max-width:900px),(orientation:portrait){
   .app{height:auto;min-height:100vh;grid-template-columns:1fr;grid-template-rows:none;grid-template-areas:"head" "music" "main" "ac"}
@@ -382,7 +409,7 @@ button:active{transform:scale(.94);transition-duration:.08s}
     <div class="sechead"><span class="lab">Scenes</span><button class="link" id="editBtn">Edit</button></div>
     <section class="scenes" id="scenes"></section>
     <section class="roomcard glass" id="roomCard"><div id="roomMini"></div><button class="rcx" id="roomOpen" aria-label="Full-screen room"></button></section>
-    <div class="sechead"><span class="lab">Lights</span><button class="link" id="allOff">All off</button></div>
+    <div class="sechead"><span class="lab">Lights</span><span style="display:flex;gap:4px"><button class="link" id="allLights">All lights</button><button class="link" id="allOff">All off</button></span></div>
     <section class="lights" id="lights"></section>
   </main>
 
@@ -396,6 +423,7 @@ button:active{transform:scale(.94);transition-duration:.08s}
     </div>
     <button class="step" id="tUp" aria-label="Raise"></button></div>
     <div class="acrow"><div class="lab">Mode</div><div class="chips" id="modes"></div></div>
+    <div class="acinfo" id="acInfo"><svg id="trend" viewBox="0 0 200 26" preserveAspectRatio="none"></svg><span class="ao" id="acAuto"></span></div>
     <div class="acrow" id="fanRow"><div class="lab">Fan</div><div class="chips" id="fans"></div></div>
     <div class="acrow" id="swingRow"><div class="lab">Swing</div><div class="chips" id="swings"></div></div>
   </section>
@@ -409,6 +437,7 @@ button:active{transform:scale(.94);transition-duration:.08s}
 </div>
 
 <button class="roomexit glass" id="roomExit"></button><div class="roomclock" id="roomClock"></div>
+<div class="night"></div>
 <div class="scrim" id="scrim"></div>
 <div class="sheet glass" id="sheet"><button class="close" id="sheetClose" aria-label="Close"></button><div id="sheetBody"></div></div>
 <div class="idle" id="idle"><div class="ig" id="iGreet"></div><div class="ic" id="iClock"></div><div class="id" id="iDate"></div><div class="is" id="iSum"></div></div>
@@ -443,7 +472,7 @@ const DEFAULT_SCENES = [
   { id: "study", name: "Study", icon: "book", lights: { [L[0]]: { m: "off" }, [L[1]]: { m: "off" }, [L[2]]: { m: "off" }, [L[3]]: { m: "on", b: 100, c: WARM } }, ac: AC24 },
   { id: "wmax", name: "WMax", icon: "sun", lights: { [L[0]]: { m: "on", b: 100, c: WARM }, [L[1]]: { m: "on", b: 100, c: WARM }, [L[2]]: { m: "on", b: 100, c: WARM }, [L[3]]: { m: "on", b: 100, c: WARM } }, ac: AC24 },
   { id: "max", name: "Max", icon: "bulb", lights: { [L[0]]: { m: "on", b: 100, c: { k: 5000 } }, [L[1]]: { m: "on", b: 100, c: { k: 5000 } }, [L[2]]: { m: "on", b: 100, c: { k: 5000 } }, [L[3]]: { m: "on", b: 100, c: { k: 5000 } } }, ac: AC24 },
-  { id: "sleep", name: "Sleep", icon: "moon", lights: { [L[0]]: { m: "off" }, [L[1]]: { m: "on", b: 2, c: WARM }, [L[2]]: { m: "off" }, [L[3]]: { m: "off" } }, ac: { m: "set", hvac: "cool", t: 22, fan: "", offAfter: 3 } },
+  { id: "sleep", name: "Sleep", icon: "moon", lights: { [L[0]]: { m: "off" }, [L[1]]: { m: "on", b: 2, c: WARM }, [L[2]]: { m: "off" }, [L[3]]: { m: "off" } }, ac: { m: "set", hvac: "cool", t: 22, fan: "" } },
 ];
 const SCENES_KEY = "homepanel_scenes_v2";
 
@@ -627,7 +656,7 @@ async function connect(force){
       S = {}; states.forEach(s => S[s.entity_id] = s);
       pickClimate();
       await send({ type: "subscribe_events", event_type: "state_changed" });
-      subscribeForecast(); loadOokla();
+      subscribeForecast(); loadOokla(); loadTrend();
       await loadScenes();
       setConn(true); render();
     }
@@ -682,12 +711,12 @@ async function loadScenes(){
   else { try { v = (await send({ type: "frontend/get_user_data", key: SCENES_KEY })).value; } catch {} }
   SCENES = Array.isArray(v) && v.length ? v : JSON.parse(JSON.stringify(DEFAULT_SCENES));
   let changed = false;
-  SCENES.forEach(sc => { if (sc.id === "sleep" && sc.ac && sc.ac.m === "set" && sc.ac.offAfter === undefined) { sc.ac.offAfter = 3; changed = true; } });
+  SCENES.forEach(sc => { if (sc.ac && "offAfter" in sc.ac) { delete sc.ac.offAfter; changed = true; } });   // timer feature removed
   buildScenes();
   // Rebuild the scene scripts after an update, or when the AC changed (e.g. a new AC integration).
-  const stale = store.get("scriptsVer", 0) !== 9 || store.get("scriptsClimate", "") !== CONFIG.climate;
+  const stale = store.get("scriptsVer", 0) !== 12 || store.get("scriptsClimate", "") !== CONFIG.climate;
   if (changed) saveScenes(); else syncScripts(stale);
-  store.set("scriptsVer", 9); store.set("scriptsClimate", CONFIG.climate);
+  store.set("scriptsVer", 12); store.set("scriptsClimate", CONFIG.climate);
 }
 async function saveScenes(){
   buildScenes();
@@ -718,7 +747,6 @@ function sceneSequence(sc){
     seq.push({ action: "climate.set_hvac_mode", target: T, data: { hvac_mode: ac.hvac || "cool" } }, { delay: { seconds: 2 } });
     if (ac.t != null) seq.push({ action: "climate.set_temperature", target: T, data: { temperature: ac.t } });
     if (ac.fan) seq.push({ delay: { seconds: 2 } }, { action: "climate.set_fan_mode", target: T, data: { fan_mode: ac.fan } });
-    if (ac.offAfter > 0) seq.push({ delay: { hours: ac.offAfter } }, { action: "climate.set_hvac_mode", target: T, data: { hvac_mode: "off" } });
   }
   return seq;
 }
@@ -728,9 +756,24 @@ async function api(method, path, body){
   if (!r.ok) throw new Error(path + " " + r.status);
   return r;
 }
+const AUTO_OFF = "07:30";
+async function ensureAutoOff(force){
+  if (DEMO) return;
+  const exists = Object.keys(S).some(k => k.startsWith("automation.") && S[k].attributes.id === "panel_ac_off_0730");
+  if (exists && !force) return;
+  try {
+    await api("POST", "/api/config/automation/config/panel_ac_off_0730", {
+      alias: "Panel · AC off at 7:30 AM", description: "Created by the wall panel",
+      triggers: [{ trigger: "time", at: AUTO_OFF + ":00" }],
+      conditions: [{ condition: "not", conditions: [{ condition: "state", entity_id: CONFIG.climate, state: "off" }] }],
+      actions: [{ action: "climate.set_hvac_mode", target: { entity_id: CONFIG.climate }, data: { hvac_mode: "off" } }],
+      mode: "single" });
+  } catch (e) { console.warn("auto-off", e); }
+}
 let syncedOnce = false;
 async function syncScripts(force){
   if (DEMO || (syncedOnce && !force)) return; syncedOnce = true;
+  ensureAutoOff(force);
   try {
     const keep = new Set(SCENES.map(scriptKey));
     for (const sc of SCENES) {
@@ -749,20 +792,47 @@ async function syncScripts(force){
    ===================================================================== */
 let renderQueued = false;
 function scheduleRender(){ if (!renderQueued) { renderQueued = true; requestAnimationFrame(() => { renderQueued = false; render(); }); } }
-function render(){ renderLights(); renderAC(); renderMusic(); renderWeather(); renderNet(); renderBatteries(); renderRoom(); renderIdleSummary(); }
+function render(){ renderSceneActive(); renderSummary(); renderLights(); renderAC(); renderMusic(); renderWeather(); renderNet(); renderBatteries(); renderRoom(); renderIdleSummary(); }
+
+/* ---- One-line summary under the greeting ---- */
+let todayStr = "";
+function renderSummary(){
+  const on = CONFIG.lights.filter(l => S[l.id] && S[l.id].state === "on").length, ac = S[CONFIG.climate];
+  const m = mediaEntity() && S[mediaEntity()];
+  const bits = [todayStr, on ? `${on} light${on > 1 ? "s" : ""} on` : "Lights off",
+    ac && ac.state !== "unavailable" ? (ac.state === "off" ? "AC off" : `AC ${fmtT(ac.attributes.temperature)}°`) : "",
+    ""];
+  const t = bits.filter(Boolean).join(" · ");
+  if ($("date").textContent !== t) $("date").textContent = t;
+}
 
 /* ---- Battery levels (from the Home Assistant app on each device) ---- */
 function renderBatteries(){
-  const ids = Object.keys(S).filter(k => /^sensor\..*_battery_level$/.test(k) && (S[k].attributes.unit_of_measurement === "%" || S[k].attributes.device_class === "battery")).slice(0, 4);
+  const ids = Object.keys(S).filter(k => /^sensor\..*_battery_level$/.test(k) && (S[k].attributes.unit_of_measurement === "%" || S[k].attributes.device_class === "battery") && !isNaN(parseFloat(S[k].state)));
   const items = ids.map(id => {
     const s = S[id], v = Math.round(parseFloat(s.state)); if (isNaN(v)) return "";
     const st = S[id.replace(/_level$/, "_state")], chg = st && /charging|full/i.test(st.state) && !/not/i.test(st.state);
     const name = String(s.attributes.friendly_name || id).replace(/battery level/i, "").replace(/^.*?['’]s\s+/i, "").trim();
     const w = Math.max(1.5, 13 * v / 100);
-    return `<span class="bi${v <= 20 && !chg ? " low" : ""}">${chg ? '<svg width="10" height="14" viewBox="0 0 10 14"><path d="M6.5 0 1 8h3.5L3 14l6-8.5H5.5z" fill="#5ee08a"/></svg>' : ""}<span class="bn" title="${esc(name)}">${icon(/watch/i.test(id + name) ? "watch" : /ipad|tablet/i.test(name) ? "tablet" : /phone/i.test(name) ? "phone" : "laptop", 16)}</span><span>${v}%</span></span>`;
+    return `<span class="bi${v <= 20 && !chg ? " low" : ""}">${chg ? '<svg width="10" height="14" viewBox="0 0 10 14"><path d="M6.5 0 1 8h3.5L3 14l6-8.5H5.5z" fill="#5ee08a"/></svg>' : ""}<span class="bn" title="${esc(name)}">${icon(batIcon(id, name), 16)}</span><span>${v}%</span></span>`;
   }).join("");
-  const html = items ? `<div class="pill glass bat">${items}</div>` : "";
-  if ($("bats").dataset.h !== html) { $("bats").dataset.h = html; $("bats").innerHTML = html; }
+  const html = items ? `<button class="pill glass bat" id="batBtn">${items}</button>` : "";
+  if ($("bats").dataset.h !== html) { $("bats").dataset.h = html; $("bats").innerHTML = html; if ($("batBtn")) $("batBtn").onclick = openBatteries; }
+  if (sheetMode && sheetMode.type === "bat") openBatteries();
+}
+function batIcon(id, name){ const n = (id + " " + name).toLowerCase();
+  return /watch/.test(n) ? "watch" : /ipad|tablet/.test(n) ? "tablet" : /iphone|phone|pixel|galaxy/.test(n) ? "phone" : "laptop"; }
+function batteryList(){
+  return Object.keys(S).filter(k => /^sensor\..*_battery_level$/.test(k) && !isNaN(parseFloat(S[k].state))).map(id => {
+    const s = S[id], st = S[id.replace(/_level$/, "_state")];
+    return { id, v: Math.round(parseFloat(s.state)), name: String(s.attributes.friendly_name || id).replace(/\s*battery level/i, "").trim(),
+      chg: !!st && /charging|full/i.test(st.state) && !/not/i.test(st.state), state: st ? st.state : "" };
+  }).sort((a, b) => a.v - b.v);
+}
+function openBatteries(){
+  const list = batteryList();
+  openSheet(`<h3>Batteries</h3><p class="hint">From the Home Assistant app on each device. Lowest first.</p>
+    <div class="sect batlist">${list.map(b => `<div class="batrow${b.v <= 20 && !b.chg ? " low" : ""}">${icon(batIcon(b.id, b.name), 22)}<span class="bnm">${esc(b.name)}<div class="hint" style="margin:2px 0 0;font-size:12px">${esc(b.state || "")}</div></span><span class="bbar"><i style="width:${b.v}%"></i></span><b style="min-width:42px;text-align:right">${b.v}%</b></div>`).join("") || '<p class="hint">No devices are reporting battery yet.</p>'}</div>`, { type: "bat" });
 }
 
 /* ---- Your room, drawn from your video. Its LED strips follow the real lights,
@@ -780,8 +850,8 @@ function roomSVG(p, fit){
   const u = id => `url(#${p}${id})`;
   return `<svg viewBox="0 0 1600 1000" preserveAspectRatio="${fit}">
   <defs>
-    <linearGradient id="${p}wall" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2b2723"/><stop offset="1" stop-color="#211e1b"/></linearGradient>
-    <linearGradient id="${p}floor" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#26221d"/><stop offset="1" stop-color="#15130f"/></linearGradient>
+    <linearGradient id="${p}wall" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#dedbd6"/><stop offset="1" stop-color="#cfcbc5"/></linearGradient>
+    <linearGradient id="${p}floor" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b9ad98"/><stop offset="1" stop-color="#998d77"/></linearGradient>
     <linearGradient id="${p}oak" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9a7a50"/><stop offset="1" stop-color="#6e5536"/></linearGradient>
     ${glow("gC1")}${glow("gC2")}${glow("gS")}${glow("gB")}${pool("pB")}${pool("pS")}
     <radialGradient id="${p}rC1" cx=".5" cy="0" r=".9"><stop offset="0" stop-color="#fff" stop-opacity=".6"/><stop offset=".45" stop-color="#fff" stop-opacity=".18"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
@@ -792,27 +862,29 @@ function roomSVG(p, fit){
   </defs>
   <rect width="1600" height="1000" fill="${u("wall")}"/>
   <rect y="820" width="1600" height="180" fill="${u("floor")}"/>
-  <path d="M0 820 H1600" stroke="#3a352e" stroke-width="3"/>
-  <g class="lg" data-l="0"><ellipse cx="400" cy="104" rx="460" ry="420" fill="${u("rC1")}"/><rect x="20" y="95" width="760" height="12" rx="6" fill="currentColor" opacity=".35"/><rect x="20" y="98" width="760" height="5" rx="2.5" fill="currentColor"/></g>
-  <g class="lg" data-l="1"><ellipse cx="1200" cy="104" rx="460" ry="420" fill="${u("rC2")}"/><rect x="820" y="95" width="760" height="12" rx="6" fill="currentColor" opacity=".35"/><rect x="820" y="98" width="760" height="5" rx="2.5" fill="currentColor"/></g>
-  <rect width="1600" height="96" fill="#2f2b27"/><rect y="96" width="1600" height="3" fill="#1a1815"/>
-  <rect x="0" y="104" width="250" height="716" fill="#36322d"/><path d="M125 104 V820 M0 300 H250" stroke="#26231f" stroke-width="4"/>
+  <path d="M0 820 H1600" stroke="#a69a85" stroke-width="3"/>
+  <g class="lg" data-l="0" id="${p}g0"><ellipse cx="400" cy="104" rx="460" ry="420" fill="${u("rC1")}"/><rect x="20" y="95" width="760" height="12" rx="6" fill="currentColor" opacity=".35"/><rect x="20" y="98" width="760" height="5" rx="2.5" fill="currentColor"/></g>
+  <g class="lg" data-l="1" id="${p}g1"><ellipse cx="1200" cy="104" rx="460" ry="420" fill="${u("rC2")}"/><rect x="820" y="95" width="760" height="12" rx="6" fill="currentColor" opacity=".35"/><rect x="820" y="98" width="760" height="5" rx="2.5" fill="currentColor"/></g>
+  <rect width="1600" height="96" fill="#e9e7e3"/><rect y="96" width="1600" height="3" fill="#bdb8b1"/>
+  <rect x="0" y="104" width="250" height="716" fill="#eceae6"/><path d="M125 104 V820 M0 300 H250" stroke="#c9c5be" stroke-width="4"/>
   <path d="M112 520 v60 M138 520 v60 M112 210 v40 M138 210 v40" stroke="#121110" stroke-width="6" stroke-linecap="round"/>
-  <g class="acu"><rect x="980" y="150" width="330" height="72" rx="14" fill="#45413c"/><path d="M995 205 H1295" stroke="#2c2925" stroke-width="3"/><circle class="acled" cx="1285" cy="172" r="5" fill="#5ee08a" opacity="0"/></g>
+  <g class="acu"><rect x="980" y="150" width="330" height="72" rx="14" fill="#f3f2ef"/><path d="M995 205 H1295" stroke="#c7c3bc" stroke-width="3"/><circle class="acled" cx="1285" cy="172" r="5" fill="#5ee08a" opacity="0"/></g>
   <rect x="420" y="250" width="420" height="300" rx="6" fill="#0b0b0a"/>
   <g stroke="#26231f" stroke-width="5">${[1, 2, 3, 4, 5, 6, 7].map(i => `<path d="M${420 + i * 52.5} 250 V550"/>`).join("")}<path d="M420 400 H840"/><path d="M560 250 V550 M700 250 V550" stroke-width="10"/></g>
-  <g class="lg" data-l="2"><ellipse cx="560" cy="815" rx="420" ry="80" fill="${u("pB")}"/><rect x="262" y="772" width="596" height="14" rx="7" fill="currentColor" opacity=".3"/><rect x="275" y="771" width="570" height="4" rx="2" fill="currentColor"/></g>
-  <rect x="300" y="500" width="520" height="190" rx="18" fill="#3a3733"/>
-  <path d="${Array.from({ length: 10 }, (_, i) => `M${330 + i * 50} 520 V680`).join(" ")}" stroke="#312e2a" stroke-width="3"/>
-  <rect x="270" y="650" width="580" height="74" rx="14" fill="#cfcac2" opacity=".55"/>
-  <rect x="330" y="618" width="170" height="44" rx="20" fill="#dcd7cf" opacity=".6"/><rect x="520" y="618" width="170" height="44" rx="20" fill="#dcd7cf" opacity=".6"/>
-  <rect x="262" y="718" width="596" height="56" rx="10" fill="#2a2825"/>
-  <g class="lg" data-l="3"><ellipse cx="1260" cy="398" rx="320" ry="270" fill="${u("rS")}" clip-path="${u("below")}"/><ellipse cx="1270" cy="652" rx="270" ry="34" fill="${u("pS")}"/><rect x="1000" y="397" width="520" height="4" rx="2" fill="currentColor"/></g>
+  <g class="lg" data-l="2" id="${p}g2"><ellipse cx="560" cy="815" rx="420" ry="80" fill="${u("pB")}"/><rect x="262" y="772" width="596" height="14" rx="7" fill="currentColor" opacity=".3"/><rect x="275" y="771" width="570" height="4" rx="2" fill="currentColor"/></g>
+  <rect x="300" y="500" width="520" height="190" rx="18" fill="#45474a"/>
+  <path d="${Array.from({ length: 10 }, (_, i) => `M${330 + i * 50} 520 V680`).join(" ")}" stroke="#38393c" stroke-width="3"/>
+  <rect x="270" y="650" width="580" height="74" rx="14" fill="#f1efeb"/>
+  <rect x="330" y="618" width="170" height="44" rx="20" fill="#fbfaf8"/><rect x="520" y="618" width="170" height="44" rx="20" fill="#fbfaf8"/>
+  <rect x="262" y="718" width="596" height="56" rx="10" fill="#3a3c3f"/>
+  <g class="lg" data-l="3" id="${p}g3"><ellipse cx="1260" cy="398" rx="320" ry="270" fill="${u("rS")}" clip-path="${u("below")}"/><ellipse cx="1270" cy="652" rx="270" ry="34" fill="${u("pS")}"/><rect x="1000" y="397" width="520" height="4" rx="2" fill="currentColor"/></g>
   <rect x="990" y="380" width="540" height="18" rx="4" fill="${u("oak")}"/>
   <rect x="1170" y="520" width="200" height="118" rx="8" fill="#0c0c0b" stroke="#3b3834" stroke-width="4"/><rect x="1255" y="638" width="30" height="16" fill="#2c2a27"/>
   <rect x="1030" y="650" width="480" height="20" rx="4" fill="${u("oak")}"/>
   <path d="M1080 670 V820 M1460 670 V820 M1050 820 H1110 M1430 820 H1490" stroke="#0e0d0c" stroke-width="12" stroke-linecap="round"/>
-  <path d="M1090 600 q20-40 60-20 v120 h-50 z" fill="#4a4a48"/><path d="M1110 700 v80 M1080 790 h70" stroke="#3a3a38" stroke-width="8" stroke-linecap="round"/>
+  <path d="M1090 600 q20-40 60-20 v120 h-50 z" fill="#77797c"/><path d="M1110 700 v80 M1080 790 h70" stroke="#3a3a38" stroke-width="8" stroke-linecap="round"/>
+  <rect class="dark" width="1600" height="1000" fill="#07070c" opacity=".6"/>
+  ${[0, 1, 2, 3].map(k => `<use href="#${p}g${k}" opacity=".7"/>`).join("")}
   <rect width="1600" height="1000" fill="${u("vig")}"/>
   <g class="spots">${ROOM_SPOTS.map(s => `<rect class="hit" data-spot="${s.key}" x="${s.hit[0]}" y="${s.hit[1]}" width="${s.hit[2]}" height="${s.hit[3]}" fill="transparent"/>`).join("")}</g>
   <g class="tags">${ROOM_SPOTS.map(s => `<g class="tag" data-tag="${s.key}" transform="translate(${s.tag[0]},${s.tag[1]})"><rect x="-95" y="-26" width="190" height="52" rx="26"/><circle class="td" cx="-66" cy="0" r="9"/><text class="tn" x="-48" y="-3"></text><text class="ts" x="-48" y="17"></text></g>`).join("")}</g>
@@ -848,6 +920,10 @@ function renderRoom(){
       t.querySelector(".td").style.fill = on ? col : "rgba(255,255,255,.25)";
     });
   });
+  // the room gets lighter as more strips come on (ceilings count most)
+  const W = [0.38, 0.38, 0.09, 0.15];
+  const lvl = CONFIG.lights.reduce((t, l, i) => { const s = S[l.id]; return t + (s && s.state === "on" ? W[i] * (s.attributes.brightness || 255) / 255 : 0); }, 0);
+  document.querySelectorAll(".dark").forEach(r => r.setAttribute("opacity", Math.max(0.06, 0.62 - 0.6 * lvl).toFixed(2)));
   const ac = S[CONFIG.climate], acOn = ac && ac.state !== "off" && ac.state !== "unavailable";
   document.querySelectorAll(".acled").forEach(c => c.setAttribute("opacity", acOn ? "1" : "0"));
   document.querySelectorAll('.tag[data-tag="ac"]').forEach(t => {
@@ -871,13 +947,28 @@ function buildLights(){
     const el = document.createElement("button");
     el.className = "light glass"; el.id = "L" + i;
     el.innerHTML = `<div class="art2">${illustration(l.art, i)}</div><div class="ln">${esc(l.name)}</div><div class="ls">Off</div><div class="bar"><i></i></div>`;
-    let timer = null, long = false, sx = 0, sy = 0;
-    el.addEventListener("pointerdown", e => { long = false; sx = e.clientX; sy = e.clientY; el.classList.add("press");
-      timer = setTimeout(() => { long = true; el.classList.remove("press"); openLightSheet(i); }, 450); });
-    el.addEventListener("pointermove", e => { if (timer && Math.hypot(e.clientX - sx, e.clientY - sy) > 10) { clearTimeout(timer); timer = null; el.classList.remove("press"); } });
-    const up = () => { el.classList.remove("press"); if (timer) { clearTimeout(timer); timer = null; if (!long) toggleLight(l.id); } };
+    // tap = on/off · swipe left/right = brightness · long-press = colour & effects
+    let timer = null, long = false, sx = 0, sy = 0, sliding = false, startPct = 0, pct = 0;
+    el.addEventListener("pointerdown", e => { long = false; sliding = false; sx = e.clientX; sy = e.clientY; el.classList.add("press");
+      el.setPointerCapture(e.pointerId); startPct = pctOf(S[l.id]);
+      timer = setTimeout(() => { long = true; timer = null; el.classList.remove("press"); openLightSheet(i); }, 450); });
+    el.addEventListener("pointermove", e => {
+      const dx = e.clientX - sx, dy = e.clientY - sy;
+      if (!sliding && !long && Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy) * 1.2) { clearTimeout(timer); timer = null; sliding = true; el.classList.remove("press"); el.classList.add("dragging"); drag.add(l.id); }
+      else if (!sliding && timer && Math.abs(dy) > 10) { clearTimeout(timer); timer = null; el.classList.remove("press"); }
+      if (sliding) {
+        pct = Math.max(1, Math.min(100, Math.round(startPct + dx / el.clientWidth * 130)));
+        el.querySelector(".bar i").style.width = pct + "%"; el.querySelector(".ls").innerHTML = `<b>${pct}%</b>`;
+        el.classList.add("on");
+      }
+    });
+    const up = () => {
+      el.classList.remove("press");
+      if (sliding) { sliding = false; el.classList.remove("dragging"); drag.delete(l.id); call("light", "turn_on", { entity_id: l.id, brightness_pct: pct }); return; }
+      if (timer) { clearTimeout(timer); timer = null; if (!long) toggleLight(l.id); }
+    };
     el.addEventListener("pointerup", up);
-    el.addEventListener("pointercancel", () => { clearTimeout(timer); timer = null; el.classList.remove("press"); });
+    el.addEventListener("pointercancel", () => { clearTimeout(timer); timer = null; sliding = false; drag.delete(l.id); el.classList.remove("press", "dragging"); renderLights(); });
     el.addEventListener("contextmenu", e => e.preventDefault());
     wrap.appendChild(el);
   });
@@ -886,7 +977,7 @@ function toggleLight(id){ const s = S[id]; if (s) call("light", s.state === "on"
 const pctOf = s => s && s.state === "on" ? Math.max(1, Math.round((s.attributes.brightness || 255) / 2.55)) : 0;
 function renderLights(){
   CONFIG.lights.forEach((l, i) => {
-    const el = $("L" + i), s = S[l.id]; if (!el) return;
+    const el = $("L" + i), s = S[l.id]; if (!el || drag.has(l.id)) return;
     el.classList.toggle("unavail", !s || s.state === "unavailable");
     const on = !!s && s.state === "on";
     el.classList.toggle("on", on);
@@ -904,7 +995,7 @@ function sceneSummary(sc){
   const allOff = CONFIG.lights.every(l => sc.lights && sc.lights[l.id] && sc.lights[l.id].m === "off");
   const parts = [on.length ? on.join(", ") : allOff ? "Lights off" : ""];
   if (sc.ac && sc.ac.m === "off") parts.push("AC off");
-  if (sc.ac && sc.ac.m === "set") parts.push("AC " + (sc.ac.t ?? "") + "°" + (sc.ac.offAfter ? ` · off after ${sc.ac.offAfter} h` : ""));
+  if (sc.ac && sc.ac.m === "set") parts.push("AC " + (sc.ac.t ?? "") + "°");
   return parts.filter(Boolean).join(" · ") || "No changes yet";
 }
 function buildScenes(){
@@ -932,8 +1023,28 @@ function buildScenes(){
   const narrow = window.matchMedia("(max-width:900px),(orientation:portrait)").matches, cols = narrow ? 2 : Math.min(Math.max(n, 1), 5);
   wrap.style.gridTemplateColumns = `repeat(${cols},minmax(0,1fr))`;
   wrap.style.gridTemplateRows = "";
+  renderSceneActive();
   $("editBtn").textContent = editing ? "Done" : "Edit";
   $("editBtn").classList.toggle("on", editing);
+}
+function sceneActive(sc){
+  let checked = 0;
+  for (const id of Object.keys(sc.lights || {})) {
+    const v = sc.lights[id], st = S[id]; if (v.m === "skip") continue; if (!st) return false; checked++;
+    if (v.m === "off") { if (st.state !== "off") return false; continue; }
+    if (st.state !== "on" || Math.abs(pctOf(st) - (v.b ?? 100)) > 6) return false;
+    const a = st.attributes;
+    if (v.c && v.c.k && a.color_temp_kelvin && Math.abs(a.color_temp_kelvin - v.c.k) > 350) return false;
+    if (v.c && v.c.rgb && a.rgb_color && v.c.rgb.some((x, k) => Math.abs(x - a.rgb_color[k]) > 45)) return false;
+  }
+  const ac = sc.ac || {}, acs = S[CONFIG.climate];
+  if (ac.m === "off" && acs && acs.state !== "off") return false;
+  if (ac.m === "set" && acs) { checked++; if ((ac.hvac && acs.state !== ac.hvac) || (ac.t != null && Math.abs((acs.attributes.temperature ?? 0) - ac.t) > 0.4)) return false; }
+  return checked > 0;
+}
+function renderSceneActive(){
+  const tiles = $("scenes").querySelectorAll(".scene:not(.add)"); let found = false;
+  SCENES.forEach((sc, i) => { const on = !found && !editing && sceneActive(sc); if (on) found = true; tiles[i] && tiles[i].classList.toggle("active", on); });
 }
 function runScene(sc){
   // Stop any other running scene (e.g. a pending AC sleep timer), then run this one in Home Assistant.
@@ -1001,12 +1112,33 @@ function renderAC(){
   drawArc(t == null ? 0 : (t - minT) / (maxT - minT), minT, maxT);
   const room = a.current_temperature != null ? `Room ${Math.round(a.current_temperature)}°` : "";
   $("tSub").textContent = [room, off ? "Off" : MODE_LABEL[s.state] || nice(s.state)].filter(Boolean).join(" · ");
+  $("acAuto").textContent = off ? "Auto-off 7:30 AM" : "Turns off 7:30 AM";
   renderChips($("modes"), (a.hvac_modes || []).filter(m => m !== "off"), s.state, m => call("climate", "set_hvac_mode", { entity_id: CONFIG.climate, hvac_mode: m }), MODE_LABEL);
   $("fanRow").hidden = !a.fan_modes;
   if (a.fan_modes) renderChips($("fans"), a.fan_modes, a.fan_mode, m => call("climate", "set_fan_mode", { entity_id: CONFIG.climate, fan_mode: m }));
   $("swingRow").hidden = !a.swing_modes;
   if (a.swing_modes) renderChips($("swings"), a.swing_modes, a.swing_mode, m => call("climate", "set_swing_mode", { entity_id: CONFIG.climate, swing_mode: m }));
 }
+/* Room temperature over the last 24 h (from Home Assistant history), refreshed every 30 min. */
+async function loadTrend(){
+  let pts = [];
+  if (DEMO) { for (let k = 0; k <= 48; k++) pts.push(27 - 3 * Math.sin(k / 8) - (k > 30 ? 2 : 0)); }
+  else {
+    try {
+      const r = await send({ type: "history/history_during_period", start_time: new Date(Date.now() - 864e5).toISOString(),
+        entity_ids: [CONFIG.climate], minimal_response: false, no_attributes: false, significant_changes_only: false });
+      pts = (r[CONFIG.climate] || []).map(x => x.a && x.a.current_temperature).filter(v => typeof v === "number");
+    } catch {}
+  }
+  if (pts.length < 2) { $("trend").innerHTML = ""; return; }
+  const lo = Math.min(...pts), hi = Math.max(...pts), span = Math.max(hi - lo, 1);
+  const xy = pts.map((v, k) => [(k / (pts.length - 1) * 200).toFixed(1), (23 - (v - lo) / span * 20).toFixed(1)]);
+  const line = "M" + xy.map(p => p.join(" ")).join(" L");
+  $("trend").innerHTML = `<path class="ta" d="${line} L200 26 L0 26 Z"/><path class="tr" d="${line}" vector-effect="non-scaling-stroke"/>`;
+  $("trend").setAttribute("aria-label", `Room ${Math.round(lo)}–${Math.round(hi)}° in the last 24 hours`);
+}
+setInterval(loadTrend, 30 * 60000);
+
 function stepTemp(dir){
   const s = S[CONFIG.climate]; if (!s) return;
   const a = s.attributes, step = a.target_temp_step || 1, cur = pendingTemp ?? a.temperature ?? 24;
@@ -1290,28 +1422,36 @@ function openSheet(html, mode){ sheetMode = mode || null; $("sheetBody").innerHT
 function closeSheet(){ sheetMode = null; $("sheet").classList.remove("open"); $("scrim").classList.remove("open"); }
 
 /* Light options (long-press a light) */
+function sheetLights(i){ return i < 0 ? CONFIG.lights.map(l => l.id) : [CONFIG.lights[i].id]; }
 function openLightSheet(i){
-  const l = CONFIG.lights[i], s = S[l.id]; if (!s) return;
-  const effects = (s.attributes.effect_list || []).filter(e => e && e.toLowerCase() !== "off");
-  openSheet(`<h3>${esc(l.name)}</h3><p class="hint" id="lsState"></p>
+  const ids = sheetLights(i), states = ids.map(id => S[id]).filter(Boolean); if (!states.length) return;
+  const lists = states.map(s => (s.attributes.effect_list || []).filter(e => e && e.toLowerCase() !== "off"));
+  const effects = lists[0].filter(e => lists.every(l => l.includes(e)));
+  const title = i < 0 ? "All lights" : CONFIG.lights[i].name;
+  openSheet(`<h3>${esc(title)}</h3><p class="hint" id="lsState"></p>
     <div class="sect"><span class="lab">Brightness</span><input type="range" class="range" id="lsBri" min="1" max="100"></div>
-    <div class="sect"><span class="lab">Colour</span><div class="swatches">${COLORS.map((p, k) => `<button class="sw" data-k="${k}" style="background:${swBg(p)}">${p.n}</button>`).join("")}</div></div>
+    <div class="sect"><span class="lab">Colour</span><div class="swatches">${COLORS.map((p, k) => `<button class="sw" data-k="${k}" style="background:${swBg(p)}">${p.n}</button>`).join("")}</div>
+      <div style="display:flex;align-items:center;gap:12px;margin-top:10px"><span class="hint" style="margin:0;white-space:nowrap">Any colour</span><input type="color" class="cpick" id="lsPick" value="#a050ff"></div></div>
     ${effects.length ? `<div class="sect"><span class="lab">Effects</span><div class="chiplist">${effects.map(e => `<button class="chip" data-e="${esc(e)}">${esc(nice(e))}</button>`).join("")}</div></div>` : ""}
     <div class="actions"><button class="btn" id="lsToggle"></button></div>`, { type: "light", i });
   const r = $("lsBri");
   r.oninput = () => { r.style.setProperty("--p", r.value + "%"); $("lsState").textContent = r.value + "%"; drag.add("lsBri"); };
-  r.onchange = () => { drag.delete("lsBri"); call("light", "turn_on", { entity_id: l.id, brightness_pct: +r.value }); };
-  $("sheetBody").querySelectorAll(".sw").forEach(b => b.onclick = () => { const p = COLORS[b.dataset.k]; call("light", "turn_on", { entity_id: l.id, ...(p.k ? { color_temp_kelvin: p.k } : { rgb_color: p.rgb }) }); });
-  $("sheetBody").querySelectorAll("[data-e]").forEach(b => b.onclick = () => call("light", "turn_on", { entity_id: l.id, effect: b.dataset.e }));
-  $("lsToggle").onclick = () => toggleLight(l.id);
+  r.onchange = () => { drag.delete("lsBri"); call("light", "turn_on", { entity_id: ids, brightness_pct: +r.value }); };
+  $("sheetBody").querySelectorAll(".sw").forEach(b => b.onclick = () => { const p = COLORS[b.dataset.k]; call("light", "turn_on", { entity_id: ids, ...(p.k ? { color_temp_kelvin: p.k } : { rgb_color: p.rgb }) }); });
+  let pickT = null;
+  $("lsPick").oninput = e => { clearTimeout(pickT); const h = e.target.value; pickT = setTimeout(() => call("light", "turn_on", { entity_id: ids, rgb_color: [1, 3, 5].map(k => parseInt(h.substr(k, 2), 16)) }), 180); };
+  $("sheetBody").querySelectorAll("[data-e]").forEach(b => b.onclick = () => call("light", "turn_on", { entity_id: ids, effect: b.dataset.e }));
+  $("lsToggle").onclick = () => { const anyOn = ids.some(id => S[id] && S[id].state === "on"); call("light", anyOn ? "turn_off" : "turn_on", { entity_id: ids }); };
   refreshLightSheet();
 }
 function refreshLightSheet(){
-  const l = CONFIG.lights[sheetMode.i], s = S[l.id]; if (!s || !$("lsBri")) return;
-  const on = s.state === "on", p = pctOf(s) || 50;
-  if (!drag.has("lsBri")) { $("lsBri").value = p; $("lsBri").style.setProperty("--p", (on ? p : 0) + "%"); $("lsState").textContent = on ? p + "%" : "Off"; }
-  $("lsToggle").innerHTML = icon("power", 18) + (on ? "Turn off" : "Turn on");
-  $("sheetBody").querySelectorAll("[data-e]").forEach(b => b.classList.toggle("sel", s.attributes.effect === b.dataset.e));
+  const ids = sheetLights(sheetMode.i), on = ids.filter(id => S[id] && S[id].state === "on"); if (!$("lsBri")) return;
+  const ref = S[on[0] || ids[0]]; if (!ref) return;
+  const p = on.length ? Math.round(on.reduce((a, id) => a + pctOf(S[id]), 0) / on.length) : 50;
+  if (!drag.has("lsBri")) { $("lsBri").value = p; $("lsBri").style.setProperty("--p", (on.length ? p : 0) + "%");
+    $("lsState").textContent = !on.length ? "Off" : sheetMode.i < 0 ? `${on.length} of ${ids.length} on · ${p}%` : p + "%"; }
+  $("lsToggle").innerHTML = icon("power", 18) + (on.length ? (sheetMode.i < 0 ? "Turn all off" : "Turn off") : (sheetMode.i < 0 ? "Turn all on" : "Turn on"));
+  $("sheetBody").querySelectorAll("[data-e]").forEach(b => b.classList.toggle("sel", ref.attributes.effect === b.dataset.e));
 }
 
 /* Scene editor */
@@ -1350,7 +1490,6 @@ function drawEditor(){
     ${ac.m === "set" ? `<div class="esub">
       <div class="erow" style="border:0;padding-top:0"><span class="hint" style="margin:0">Temperature</span><span class="stepper"><button data-at="-1">${icon("minus", 16)}</button><span>${ac.t ?? 24}°</span><button data-at="1">${icon("plus", 16)}</button></span></div>
       <div class="chiplist" style="margin-bottom:10px">${hv.map(m => `<button class="chip${ac.hvac === m ? " sel" : ""}" data-ah="${m}">${MODE_LABEL[m] || nice(m)}</button>`).join("")}</div>
-      <div class="chiplist" style="margin-bottom:10px"><span class="hint" style="margin:0 6px 0 0;align-self:center">Turn off after</span>${[0, 1, 2, 3, 4, 6, 8].map(h => `<button class="chip${(ac.offAfter || 0) === h ? " sel" : ""}" data-ao="${h}">${h ? h + " h" : "Never"}</button>`).join("")}</div>
       ${fans.length ? `<div class="chiplist"><button class="chip${!ac.fan ? " sel" : ""}" data-af="">Fan: leave</button>${fans.map(f => `<button class="chip${ac.fan === f ? " sel" : ""}" data-af="${f}">${nice(f)}</button>`).join("")}</div>` : ""}
     </div>` : ""}`;
   const html = `<h3>${draftIndex >= 0 ? "Edit scene" : "New scene"}</h3><p class="hint">“Leave” means the scene doesn't touch that device.</p>
@@ -1377,7 +1516,6 @@ function drawEditor(){
   B.querySelectorAll("[data-at]").forEach(b => b.onclick = () => { const st = acA.target_temp_step || 1; draft.ac.t = Math.max(acA.min_temp ?? 16, Math.min(acA.max_temp ?? 30, (draft.ac.t ?? 24) + st * b.dataset.at)); drawEditor(); });
   B.querySelectorAll("[data-ah]").forEach(b => b.onclick = () => { draft.ac.hvac = b.dataset.ah; drawEditor(); });
   B.querySelectorAll("[data-af]").forEach(b => b.onclick = () => { draft.ac.fan = b.dataset.af; drawEditor(); });
-  B.querySelectorAll("[data-ao]").forEach(b => b.onclick = () => { draft.ac.offAfter = +b.dataset.ao; drawEditor(); });
   $("edCapture").onclick = () => { fromCurrentRoom(); drawEditor(); toast("Copied the room as it is now"); };
   $("edTry").onclick = () => runSceneDirect(draft);
   $("edSave").onclick = () => {
@@ -1402,10 +1540,12 @@ function openSettings(){
   openSheet(`<h3>Appearance</h3><p class="hint">Saved on this device. Scenes are saved in Home Assistant and shared by all your devices.</p>
     <div class="sect"><span class="lab">Accent</span><div class="chiplist">${ACCENTS.map(a => `<button class="chip${a.name === acc ? " sel" : ""}" data-a="${a.name}"><span style="width:10px;height:10px;border-radius:5px;background:${a.c}"></span>${a.name}</button>`).join("")}</div></div>
     <div class="sect"><span class="lab">Background</span><div class="chiplist">${BACKDROPS.map(b => `<button class="chip${b.name === bd ? " sel" : ""}" data-b="${b.name}">${b.name}</button>`).join("")}</div></div>
+    <div class="sect"><span class="lab">Night dimming (11 PM – 6 AM)</span><div class="chiplist"><button class="chip${store.get("nightDim", true) ? " sel" : ""}" data-n="1">On</button><button class="chip${store.get("nightDim", true) ? "" : " sel"}" data-n="0">Off</button></div></div>
     <div class="sect"><span class="lab">Screen</span><div class="chiplist"><button class="chip" id="dimNow">Dim now</button>${DEMO ? "" : `<button class="chip" id="signOut">Sign out</button>`}</div></div>`);
   $("sheetBody").querySelectorAll("[data-a]").forEach(b => b.onclick = () => { store.set("accent2", b.dataset.a); applyTheme(); render(); openSettings(); });
   $("sheetBody").querySelectorAll("[data-b]").forEach(b => b.onclick = () => { store.set("backdrop2", b.dataset.b); applyTheme(); openSettings(); });
   $("dimNow").onclick = () => { closeSheet(); sleep(); };
+  $("sheetBody").querySelectorAll("[data-n]").forEach(b => b.onclick = () => { store.set("nightDim", b.dataset.n === "1"); tick(); openSettings(); });
   if ($("signOut")) $("signOut").onclick = () => { store.set("tokens", null); location.reload(); };
 }
 
@@ -1456,10 +1596,13 @@ function tick(){
   const d = new Date();
   const parts = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true }).split(" ");
   const time = parts[0], ampm = parts[1] || "";
-  const date = d.toLocaleDateString([], { weekday: "long", day: "numeric", month: "long" });
+  const date = d.toLocaleDateString("en-US", { weekday: "short", day: "numeric", month: "short" });
   const html = `${time}<span class="ampm">${ampm}</span>`;
   if ($("clock").innerHTML !== html) { $("clock").innerHTML = html; $("roomClock").innerHTML = html; $("iClock").innerHTML = html; }
-  $("date").textContent = date; $("iDate").textContent = date;
+  if (todayStr !== date) { todayStr = date; renderSummary(); }
+  $("iDate").textContent = date;
+  const nightNow = store.get("nightDim", true) && (d.getHours() >= 23 || d.getHours() < 6);
+  document.body.classList.toggle("isnight", nightNow);
   const h = d.getHours(), g = h < 5 ? "Good night" : h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : h < 21 ? "Good evening" : "Good night";
   const greet = CONFIG.name ? `${g}, ${CONFIG.name}` : g;
   if ($("greet").textContent !== greet) { $("greet").textContent = greet; $("iGreet").textContent = greet; }
@@ -1533,7 +1676,7 @@ function demoCall(domain, service, d){
 /* =====================================================================
    Auto-update: reload when a newer version is installed
    ===================================================================== */
-const VERSION = "2026.11.19.10";
+const VERSION = "2026.11.19.12";
 if (!DEMO) setInterval(async () => {
   try { const v = await (await fetch("version.json?t=" + Date.now(), { cache: "no-store" })).json();
     if (v.version && v.version !== VERSION && !sheetMode) location.reload(); } catch {}
@@ -1548,6 +1691,7 @@ $("mPrev").innerHTML = icon("prev", 20); $("mNext").innerHTML = icon("next", 20)
 $("mShuf").innerHTML = icon("shuffle", 18); $("mRep").innerHTML = icon("repeat", 18); $("vIco").innerHTML = icon("vol", 18);
 $("sheetClose").innerHTML = icon("close", 18); $("acName").textContent = CONFIG.climateName;
 $("tUp").onclick = () => stepTemp(1); $("tDown").onclick = () => stepTemp(-1); $("acPower").onclick = acPower;
+$("allLights").onclick = () => openLightSheet(-1);
 $("allOff").onclick = () => call("light", "turn_off", { entity_id: CONFIG.lights.map(l => l.id) });
 $("editBtn").onclick = () => vt(() => { editing = !editing; buildScenes(); });
 $("settingsBtn").onclick = openSettings; $("scrim").onclick = closeSheet; $("sheetClose").onclick = closeSheet;
@@ -1575,7 +1719,7 @@ if (DEMO) {
   S = demoStates();
   const conds = ["partlycloudy", "partlycloudy", "rainy", "cloudy", "clear-night", "clear-night", "clear-night", "clear-night", "clear-night", "clear-night", "clear-night", "sunny", "sunny", "sunny", "partlycloudy", "partlycloudy"], h0 = new Date(); h0.setMinutes(0, 0, 0);
   forecast = conds.map((c, i) => ({ datetime: new Date(+h0 + (i + 1) * 3600000).toISOString(), condition: c, temperature: 30 - Math.min(i, 8) * .8 + Math.max(0, i - 10) * 1.2, precipitation_probability: c === "rainy" ? 60 : 5 }));
-  loadScenes(); setConn(true); render();
+  loadScenes(); setConn(true); render(); loadTrend();
 }
 else { SCENES = JSON.parse(JSON.stringify(DEFAULT_SCENES)); buildScenes(); connect(); }
 </script>
