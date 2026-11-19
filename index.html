@@ -656,7 +656,7 @@ async function connect(force){
     if (m.type === "auth_required") ws.send(JSON.stringify({ type: "auth", access_token: token }));
     else if (m.type === "auth_invalid") { ws.onclose = null; ws.close(); connect(true); }
     else if (m.type === "auth_ok") {
-      retry = 0; msgId = 1; pending = {}; subs = {};
+      retry = 0; offlineSince = 0; msgId = 1; pending = {}; subs = {};
       const states = await send({ type: "get_states" });
       S = {}; states.forEach(s => S[s.entity_id] = s);
       pickClimate();
@@ -690,7 +690,17 @@ function subscribeForecast(){
   const id = weatherEntity(); if (!id) return;
   subscribe({ type: "weather/subscribe_forecast", entity_id: id, forecast_type: "hourly" }, ev => { forecast = (ev && ev.forecast) || []; renderWeather(); });
 }
-function scheduleReconnect(){ retry = Math.min(retry + 1, 6); setTimeout(() => connect(), 500 * 2 ** retry); }
+let offlineSince = 0;
+function scheduleReconnect(){
+  retry = Math.min(retry + 1, 6);
+  if (!offlineSince) offlineSince = Date.now();
+  // Home Assistant can take a few minutes to boot after a power cut. If we've been offline for 3+ minutes,
+  // reload the whole page once it answers again, so everything (scenes, forecast, lyrics) starts fresh.
+  if (Date.now() - offlineSince > 180000) {
+    fetch(ORIGIN + "/manifest.json", { cache: "no-store" }).then(r => { if (r.ok) location.reload(); }).catch(() => {});
+  }
+  setTimeout(() => connect(), 500 * 2 ** retry);
+}
 document.addEventListener("visibilitychange", () => { if (!DEMO && document.visibilityState === "visible" && (!ws || ws.readyState > 1)) connect(); });
 async function call(domain, service, data){
   if (DEMO) return demoCall(domain, service, data);
@@ -1641,9 +1651,17 @@ function renderIdleSummary(){
   $("iSum").innerHTML = `<span>${on ? on + " light" + (on > 1 ? "s" : "") + " on" : "Lights off"}</span>${ac ? `<span>${ac.state === "off" ? "AC off" : "AC " + fmtT(ac.attributes.temperature) + "°"}</span>` : ""}${m && m.state === "playing" && m.attributes.media_title ? `<span>♪ ${esc(m.attributes.media_title)}</span>` : ""}`;
 }
 function sleep(){ closeSheet(); clearTimeout(lyTimer); if (focus) setFocus(""); document.body.classList.remove("roommode"); roomFit(false); $("idle").classList.add("show"); }
-function wake(){ lastTouch = Date.now(); $("idle").classList.remove("show"); scheduleLyrics(); }
+function wake(){ lastTouch = Date.now(); if ($("idle").classList.contains("show")) swallowUntil = Math.max(swallowUntil === Infinity ? 0 : swallowUntil, Date.now() + 600); $("idle").classList.remove("show"); scheduleLyrics(); }
 ["pointerdown", "keydown"].forEach(ev => document.addEventListener(ev, () => { lastTouch = Date.now(); }, true));
-$("idle").addEventListener("pointerdown", e => { e.stopPropagation(); e.preventDefault(); wake(); });
+/* Waking: the first touch only wakes the screen. The overlay stays until the finger lifts, and any tap
+   that follows within 0.6 s is swallowed, so nothing underneath gets pressed by accident. */
+let swallowUntil = 0;
+const swallow = e => { if (e.target && e.target.closest && e.target.closest("#idle")) return; if (Date.now() < swallowUntil) { e.stopPropagation(); e.preventDefault(); } };
+["click", "pointerup", "pointerdown", "touchend", "contextmenu"].forEach(ev => document.addEventListener(ev, swallow, { capture: true, passive: false }));
+$("idle").addEventListener("pointerdown", e => { e.stopPropagation(); e.preventDefault(); swallowUntil = Infinity; });
+const finishWake = e => { if (!$("idle").classList.contains("show")) return; if (e) { e.stopPropagation(); e.preventDefault(); } wake(); swallowUntil = Date.now() + 600; };
+$("idle").addEventListener("pointerup", finishWake);
+$("idle").addEventListener("pointercancel", finishWake);
 let toastTimer;
 function toast(t){ const el = $("toast"); el.textContent = t; el.classList.add("show"); clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove("show"), 3000); }
 
@@ -1702,7 +1720,7 @@ function demoCall(domain, service, d){
 /* =====================================================================
    Auto-update: reload when a newer version is installed
    ===================================================================== */
-const VERSION = "2026.11.19.15";
+const VERSION = "2026.11.19.16";
 if (!DEMO) setInterval(async () => {
   try { const v = await (await fetch("version.json?t=" + Date.now(), { cache: "no-store" })).json();
     if (v.version && v.version !== VERSION && !sheetMode) location.reload(); } catch {}
