@@ -1,0 +1,1582 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Home">
+<meta name="theme-color" content="#0b0b0d">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="icon" href="icon.png">
+<title>Home Panel</title>
+<style>
+:root{
+  --accent:#f5f5f7; --accent-ink:#0b0b0d;
+  --bg1:#141417; --bg2:#050506;
+  --glass:rgba(255,255,255,.055); --glass-hi:rgba(255,255,255,.1);
+  --stroke:rgba(255,255,255,.08);
+  --text:#f5f5f7; --muted:rgba(245,245,247,.55); --faint:rgba(245,245,247,.26);
+  --line:rgba(245,245,247,.42);
+  --r:28px;
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg2);color:var(--text);font-family:var(--font);-webkit-font-smoothing:antialiased;
+  overscroll-behavior:none;-webkit-user-select:none;user-select:none;touch-action:manipulation}
+body{background:
+  radial-gradient(1100px 700px at 30% -15%, color-mix(in srgb,var(--accent) 8%,transparent), transparent 60%),
+  radial-gradient(800px 600px at 105% 105%, color-mix(in srgb,var(--accent) 6%,transparent), transparent 60%),
+  linear-gradient(160deg,var(--bg1),var(--bg2));background-attachment:fixed;min-height:100vh}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+input{font:inherit;color:inherit;-webkit-user-select:text;user-select:text}
+svg{display:block}
+.room{position:fixed;inset:0;z-index:-1;pointer-events:none;background:#0d0c0b}
+.room svg{width:100%;height:100%;display:block}
+.room .lg,.roomcard .lg{transition:opacity 1.2s ease}
+.tags .tag{opacity:0;transition:opacity .3s;pointer-events:none}
+.tags .tag rect{fill:rgba(20,18,16,.72);stroke:rgba(255,255,255,.14)}
+.tags .tag .tn{fill:#f5f5f7;font:600 19px var(--font)}
+.tags .tag .ts{fill:rgba(245,245,247,.6);font:500 16px var(--font)}
+body.roommode .room .tags .tag{opacity:1}
+.roomcard{background:#1d1a17}
+.roomcard .tags .tag{transform-box:fill-box}
+.hit{cursor:pointer}
+body:not(.roommode) .room .hit{pointer-events:none}
+body.roommode .room{pointer-events:auto;z-index:5;background:#211e1b}
+body.roommode .app{opacity:0;pointer-events:none}
+.app{transition:opacity .4s}
+.roomexit{position:fixed;top:calc(16px + env(safe-area-inset-top));right:18px;z-index:6;display:none;height:44px;padding:0 16px;border-radius:22px;align-items:center;gap:8px;font-weight:600}
+body.roommode .roomexit{display:flex}
+.roomclock{position:fixed;left:24px;top:calc(16px + env(safe-area-inset-top));z-index:6;display:none;font-size:40px;font-weight:200;color:rgba(255,255,255,.85);text-shadow:0 2px 20px rgba(0,0,0,.6)}
+body.roommode .roomclock{display:block}
+.roomcard{position:relative;flex:1 1 auto;min-height:140px;overflow:hidden;padding:0}
+.roomcard #roomMini{position:absolute;inset:0}
+.roomcard #roomMini svg{width:100%;height:100%}
+.roomcard .rcx{position:absolute;right:12px;top:12px;width:40px;height:40px;border-radius:20px;display:grid;place-items:center;background:rgba(20,18,16,.6);border:1px solid rgba(255,255,255,.12);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+html:has(body.has-room){background:#0d0c0b}
+body.has-room{background:transparent}
+body.has-room .glass{--glass:rgba(22,20,18,.36)}
+.glass{background:var(--glass);border:1px solid var(--stroke);border-radius:var(--r);
+  -webkit-backdrop-filter:blur(24px) saturate(140%);backdrop-filter:blur(24px) saturate(140%);
+  box-shadow:0 1px 0 rgba(255,255,255,.07) inset,0 0 0 1px rgba(0,0,0,.25),0 30px 60px -28px rgba(0,0,0,.9),0 10px 22px -14px rgba(0,0,0,.7);
+  background-image:linear-gradient(180deg,color-mix(in srgb,var(--accent) 7%,transparent),transparent 42%)}
+.light.on{box-shadow:0 1px 0 rgba(255,255,255,.08) inset,0 30px 60px -28px rgba(0,0,0,.9),0 0 46px -14px var(--lc,#fff)}
+.ac:not(.off){box-shadow:0 1px 0 rgba(255,255,255,.08) inset,0 30px 60px -28px rgba(0,0,0,.9),0 0 60px -30px var(--accent)}
+.music.big .art{box-shadow:0 24px 50px -20px rgba(0,0,0,.9),0 0 70px -25px var(--accent)}
+.bat{gap:14px;padding:0 14px;font-variant-numeric:tabular-nums;font-size:14px}
+.bat .bi{display:flex;align-items:center;gap:5px}
+.bat .bn{color:var(--muted)}
+.bat .bi.low{color:#ff8a80}
+.lab{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.unavail{opacity:.4}
+
+/* ---------- Layout ---------- */
+.app{height:100vh;height:100dvh;display:grid;gap:16px;
+  grid-template-columns:236px minmax(0,1fr) 296px;grid-template-rows:auto minmax(0,1fr);
+  grid-template-areas:"music head head" "music main ac";
+  padding:calc(16px + env(safe-area-inset-top)) calc(18px + env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) calc(18px + env(safe-area-inset-left))}
+header{grid-area:head;display:flex;align-items:flex-end;justify-content:space-between;gap:12px;padding:0 4px}
+.hleft{display:flex;align-items:flex-end;gap:18px}
+.greet{font-size:22px;font-weight:600;letter-spacing:-.3px;white-space:nowrap}
+.clock{font-size:52px;font-weight:200;letter-spacing:-2px;line-height:.9;font-variant-numeric:tabular-nums}
+.date{color:var(--muted);font-size:15px;margin-top:4px;font-weight:500;white-space:nowrap}
+.hright{display:flex;align-items:center;gap:8px}
+.pill{display:flex;align-items:center;gap:8px;height:42px;padding:0 15px;border-radius:21px;font-size:15px;font-weight:500}
+.iconbtn{width:42px;height:42px;border-radius:21px;display:grid;place-items:center}
+.dot{width:8px;height:8px;border-radius:50%;background:#ff6b6b;box-shadow:0 0 10px #ff6b6b}
+.dot.ok{background:#5ee08a;box-shadow:0 0 10px #5ee08a}
+.main{grid-area:main;display:flex;flex-direction:column;gap:16px;min-height:0}
+.sechead{display:flex;align-items:center;justify-content:space-between;padding:0 6px;min-height:30px}
+.link{font-size:14px;color:var(--muted);font-weight:500;padding:6px 12px;border-radius:14px;display:flex;gap:6px;align-items:center}
+.link:active,.link.on{background:var(--glass-hi);color:var(--text)}
+
+/* ---------- Music pill ---------- */
+.side{grid-area:music;display:flex;flex-direction:column;gap:14px;min-height:0}
+.music{border-radius:var(--r);padding:14px;display:flex;flex-direction:column;gap:12px;flex:0 0 auto;position:relative;overflow:hidden;min-height:0}
+.music>*{position:relative;z-index:1}
+.music .artbg{position:absolute;inset:-30px;z-index:0;background:center/cover no-repeat;filter:blur(40px) saturate(150%);opacity:0;transition:opacity .5s}
+.music.big .artbg{opacity:.42}
+.mini{display:none;width:40px;height:40px;border-radius:20px;place-items:center;background:var(--accent);color:var(--accent-ink);flex:none}
+.music.slim .mini{display:grid}
+.music.slim .pwrap,.music.slim .mctl,.music.slim .vrow,.music.slim .devbtn{display:none}
+.music.slim .art{width:44px;height:44px;border-radius:12px}
+.music.big{flex:1 1 auto}
+.music.big .mtop{flex-direction:column;align-items:stretch;flex:1 1 auto;min-height:0;gap:14px}
+.music.big .art{flex:1 1 auto;width:auto;height:auto;max-width:100%;aspect-ratio:1;align-self:center;min-height:0;border-radius:24px;box-shadow:0 24px 50px -20px rgba(0,0,0,.9)}
+.music.big .mtitle{font-size:21px}
+.music.big .martist{font-size:15px}
+.music,.wx,.ac,.net{transition:flex .35s cubic-bezier(.2,.8,.2,1),background .3s}
+.tapcard{cursor:pointer}
+.mtop{display:flex;gap:12px;align-items:center;min-width:0}
+.mtop .minfo{min-width:0;flex:1}
+.art{width:62px;height:62px;border-radius:16px;background:rgba(255,255,255,.06) center/cover no-repeat;display:grid;place-items:center;color:var(--faint);
+  box-shadow:0 12px 28px -14px rgba(0,0,0,.8);flex:none}
+/* weather */
+.wx{padding:16px;flex:1 1 auto;display:flex;flex-direction:column;min-height:0;gap:12px}
+.wx.slim{flex:0 0 auto;padding:12px 16px}
+.wx.slim .hours,.wx.slim .hlab{display:none}
+.wx.slim .wxt{font-size:30px}
+.hours{row-gap:8px}
+.wxnow{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.wxt{font-size:44px;font-weight:200;letter-spacing:-2px;line-height:1}
+.wxc{font-size:13px;color:var(--muted);margin-top:4px}
+.wxic{color:var(--text);opacity:.9}
+.hours{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin-top:-4px}
+.hr{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:12px;color:var(--muted);padding:10px 0;border-radius:16px;background:rgba(255,255,255,.045)}
+.hr b{color:var(--text);font-weight:600;font-size:14px}
+.hr .rain{font-size:10px;color:#8ec5ff;height:12px}
+/* internet speed */
+.net{padding:14px 16px;flex:none}
+.net.slim .netsub{display:none}
+.net.slim .netbig{font-size:24px;margin-top:2px}
+.nethead{display:flex;align-items:center;justify-content:space-between}
+.netrun{width:34px;height:34px;border-radius:17px;display:grid;place-items:center;background:rgba(255,255,255,.07);color:var(--muted)}
+.netrun.spin svg{animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.netbig{font-size:34px;font-weight:200;letter-spacing:-1px;margin-top:6px;font-variant-numeric:tabular-nums}
+.netbig small{font-size:14px;color:var(--muted);letter-spacing:0;margin-left:4px;font-weight:500}
+.netsub{display:flex;gap:14px;font-size:13px;color:var(--muted);margin-top:2px;font-variant-numeric:tabular-nums}
+.netsub b{color:var(--text);font-weight:600}
+.mtitle{font-size:16px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.martist{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:3px}
+.prog{height:5px;border-radius:3px;background:rgba(255,255,255,.12);position:relative;touch-action:none}
+.prog::after{content:"";position:absolute;inset:-14px 0}
+.prog .fill,.vol .fill{position:absolute;inset:0 auto 0 0;border-radius:3px;background:var(--text)}
+.times{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-top:7px;font-variant-numeric:tabular-nums}
+.mctl{display:flex;align-items:center;justify-content:space-between}
+.mctl button{width:40px;height:40px;border-radius:20px;display:grid;place-items:center;color:var(--muted)}
+.mctl button.big{width:50px;height:50px;border-radius:25px;background:var(--accent);color:var(--accent-ink)}
+.mctl button.mid{color:var(--text)}
+.mctl button.act{color:var(--text)}
+.mctl button.act::after{content:"";position:absolute;width:4px;height:4px;border-radius:2px;background:var(--text);margin-top:30px}
+.vrow{display:flex;align-items:center;gap:10px;color:var(--muted)}
+.vol{flex:1;height:5px;border-radius:3px;background:rgba(255,255,255,.12);position:relative;touch-action:none}
+.vol::after{content:"";position:absolute;inset:-14px 0}
+.devbtn{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:18px;background:rgba(255,255,255,.07);text-align:left;width:100%}
+.devbtn .dn{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.devbtn .dl{font-size:11px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;font-weight:600}
+.music.off .mctl,.music.off .vrow,.music.off .prog,.music.off .times{opacity:.3;pointer-events:none}
+
+/* ---------- Scenes ---------- */
+.scenes{flex:none;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.scene{position:relative;padding:10px 8px;height:84px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;text-align:center;min-width:0;border-radius:22px;transition:transform .15s,background .3s}
+.scene:active{transform:scale(.98)}
+.scene .sic{width:38px;height:38px;flex:none;border-radius:19px;display:grid;place-items:center;background:rgba(255,255,255,.08);transition:.3s}
+.scene .sn{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.scene .ss{font-size:13px;color:var(--muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.scene.flash{background:color-mix(in srgb,var(--accent) 22%,transparent)}
+.scene.flash .sic{background:var(--accent);color:var(--accent-ink)}
+.scene .ed{position:absolute;top:-6px;right:-6px;width:28px;height:28px;border-radius:16px;background:var(--accent);color:var(--accent-ink);display:none;place-items:center}
+.editing .scene .ed{display:grid}
+.editing .scene:not(.add){animation:jiggle .5s ease-in-out infinite alternate}
+@keyframes jiggle{from{transform:rotate(-.6deg)}to{transform:rotate(.6deg)}}
+.scene.add{border-style:dashed;align-items:center;justify-content:center;gap:6px;color:var(--muted);font-weight:500;background:transparent}
+.scene.add .sic{background:transparent;border:1px dashed var(--faint)}
+
+/* ---------- Lights ---------- */
+.lights{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;flex:none}
+.light{padding:10px 12px 12px;display:flex;flex-direction:column;text-align:left;transition:background .3s,border-color .3s;touch-action:none;position:relative}
+.light.on{background:var(--glass-hi);border-color:rgba(255,255,255,.14)}
+.light .art2{height:62px;margin:0 -4px 6px;color:var(--lc,#fff)}
+.light .ln{font-size:15px;font-weight:600}
+.light .ls{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums;margin-top:1px}
+.light .bar{position:absolute;left:12px;right:12px;bottom:8px;height:3px;border-radius:2px;background:rgba(255,255,255,.08);overflow:hidden}
+.light .bar i{position:absolute;inset:0 auto 0 0;background:var(--lc,#fff);transition:width .3s}
+.light.press{transform:scale(.97)}
+/* illustrations */
+.ill .furn{fill:none;stroke:var(--line);stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.ill .fill{fill:rgba(255,255,255,.05)}
+.ill .strip{stroke:rgba(255,255,255,.25);stroke-width:3;stroke-linecap:round;transition:stroke .4s}
+.ill .glow{opacity:0;transition:opacity .6s}
+.light.on .ill .strip{stroke:currentColor}
+.light.on .ill .glow{opacity:1;animation:breathe 4s ease-in-out infinite}
+@keyframes breathe{50%{opacity:.75}}
+
+/* ---------- AC ---------- */
+.rcol{grid-area:ac;display:flex;flex-direction:column;gap:14px;min-height:0}
+.ac{padding:16px;display:flex;flex-direction:column;min-height:0;flex:1 1 auto}
+.ac:not(.big) #fanRow,.ac:not(.big) #swingRow{display:none}
+.ac:not(.big) .dialc .big{font-size:48px}
+.app[data-focus=ac] .net{display:none}
+.offall{display:flex;align-items:center;gap:12px;padding:12px 14px;text-align:left;flex:none;border-radius:24px;transition:background .25s}
+.offall .oic{width:42px;height:42px;border-radius:21px;display:grid;place-items:center;background:rgba(255,255,255,.08);flex:none;transition:.25s}
+.offall .ot{font-weight:600;font-size:15px}
+.offall .os{font-size:12px;color:var(--muted);margin-top:2px}
+.offall.arm{background:rgba(255,80,80,.18);border-color:rgba(255,100,100,.35)}
+.offall.arm .oic{background:#ff5c5c;color:#fff}
+.achead{display:flex;justify-content:space-between;align-items:center}
+.power{width:46px;height:46px;border-radius:23px;display:grid;place-items:center;background:rgba(255,255,255,.08);transition:.25s}
+.power.on{background:var(--accent);color:var(--accent-ink)}
+.dialrow{flex:1 1 auto;min-height:0;display:flex;align-items:center;justify-content:center;gap:6px;margin:6px 0}
+.dialwrap{position:relative;flex:1;height:100%;max-width:230px;min-height:0;display:flex;align-items:center;justify-content:center}
+.dialwrap svg.arc{width:100%;height:100%;max-height:220px}
+.arc .trk{stroke:rgba(255,255,255,.09)}
+.arc .val{stroke:var(--accent);transition:d .3s}
+.arc .tick{stroke:rgba(255,255,255,.18)}
+.dialc{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none}
+.dialc .big{font-size:64px;font-weight:200;letter-spacing:-3px;line-height:1;font-variant-numeric:tabular-nums}
+.dialc .big sup{font-size:24px;letter-spacing:0;vertical-align:top;position:relative;top:8px;color:var(--muted)}
+.dialc .sub{font-size:13px;color:var(--muted);margin-top:4px}
+.ac.off .dialc .big{color:var(--faint)}
+.ac.off .arc .val{stroke:rgba(255,255,255,.2)}
+.step{width:46px;height:46px;flex:none;border-radius:23px;display:grid;place-items:center;background:rgba(255,255,255,.08)}
+.step:active{background:rgba(255,255,255,.18)}
+.acrow{margin-top:14px}
+.acrow .lab{margin:0 0 8px 4px;font-size:11px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{height:34px;padding:0 12px;border-radius:17px;background:rgba(255,255,255,.07);font-size:13px;font-weight:500;color:var(--muted)}
+.chips button.sel{background:var(--accent);color:var(--accent-ink);font-weight:600}
+
+/* ---------- Sheet ---------- */
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:opacity .25s;z-index:20}
+.scrim.open{opacity:1;pointer-events:auto}
+.sheet{position:fixed;left:50%;top:50%;width:min(600px,calc(100vw - 28px));max-height:min(86vh,720px);overflow:auto;-webkit-overflow-scrolling:touch;
+  transform:translate(-50%,-46%) scale(.97);opacity:0;visibility:hidden;transition:transform .28s cubic-bezier(.2,.8,.2,1),opacity .2s,visibility 0s .28s;
+  z-index:21;padding:22px;background:rgba(26,26,30,.9)}
+.sheet.open{transform:translate(-50%,-50%);opacity:1;visibility:visible;transition:transform .28s cubic-bezier(.2,.8,.2,1),opacity .2s}
+.sheet h3{margin:0 0 4px;font-size:21px;padding-right:44px}
+.sheet .hint{color:var(--muted);font-size:14px;margin:0 0 6px}
+.sheet .sect{margin-top:18px}
+.sheet .sect>.lab{margin:0 0 10px 2px;display:block}
+.close{position:sticky;top:0;float:right;margin:-6px -6px 0 8px;z-index:2;width:36px;height:36px;border-radius:18px;background:rgba(255,255,255,.08);display:grid;place-items:center}
+.swatches{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.sw{height:46px;border-radius:14px;border:2px solid transparent;font-size:12px;font-weight:600;color:#111;display:flex;align-items:flex-end;justify-content:center;padding-bottom:5px}
+.sw.sel{border-color:var(--text);box-shadow:0 0 0 2px var(--bg2) inset}
+.chiplist{display:flex;flex-wrap:wrap;gap:8px}
+.chip{height:38px;padding:0 14px;border-radius:19px;background:rgba(255,255,255,.08);font-size:14px;font-weight:500;display:inline-flex;align-items:center;gap:8px}
+.chip.sel{background:var(--accent);color:var(--accent-ink)}
+.seg{display:inline-flex;background:rgba(255,255,255,.06);padding:4px;border-radius:16px;gap:2px}
+.seg button{height:32px;padding:0 14px;border-radius:12px;font-size:13px;font-weight:500;color:var(--muted)}
+.seg button.sel{background:var(--accent);color:var(--accent-ink);font-weight:600}
+.range{width:100%;-webkit-appearance:none;appearance:none;height:36px;background:transparent;margin:0}
+.range::-webkit-slider-runnable-track{height:36px;border-radius:12px;background:linear-gradient(90deg,var(--text) 0 var(--p,50%),rgba(255,255,255,.1) var(--p,50%))}
+.range::-webkit-slider-thumb{-webkit-appearance:none;width:6px;height:36px;border-radius:3px;background:transparent}
+.range::-moz-range-track{height:36px;border-radius:12px;background:linear-gradient(90deg,var(--text) 0 var(--p,50%),rgba(255,255,255,.1) var(--p,50%))}
+.range::-moz-range-thumb{width:6px;height:36px;border:0;background:transparent}
+.txt{width:100%;height:46px;border-radius:14px;background:rgba(255,255,255,.07);border:1px solid var(--stroke);padding:0 14px;font-size:16px;outline:none}
+.txt:focus{border-color:rgba(255,255,255,.3)}
+.erow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 0;border-top:1px solid rgba(255,255,255,.06)}
+.erow .en{font-weight:600;font-size:15px}
+.esub{padding:0 0 12px}
+.esub .swatches{grid-template-columns:repeat(10,1fr)}
+.esub .sw{height:30px;border-radius:10px;padding:0}
+.icons{display:grid;grid-template-columns:repeat(8,1fr);gap:8px}
+.icons button{height:46px;border-radius:14px;background:rgba(255,255,255,.07);display:grid;place-items:center}
+.icons button.sel{background:var(--accent);color:var(--accent-ink)}
+.actions{display:flex;gap:10px;margin-top:22px;flex-wrap:wrap}
+.btn{height:48px;padding:0 20px;border-radius:24px;background:rgba(255,255,255,.08);font-weight:600;font-size:15px;display:inline-flex;align-items:center;gap:8px}
+.btn.primary{background:var(--accent);color:var(--accent-ink);margin-left:auto}
+.btn.danger{color:#ff7b7b}
+.stepper{display:inline-flex;align-items:center;gap:12px}
+.stepper button{width:36px;height:36px;border-radius:18px;background:rgba(255,255,255,.08);display:grid;place-items:center}
+.stepper span{min-width:46px;text-align:center;font-weight:600;font-variant-numeric:tabular-nums}
+.devlist{display:flex;flex-direction:column;gap:8px}
+.dev{display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:18px;background:rgba(255,255,255,.06);text-align:left}
+.dev.sel{background:color-mix(in srgb,var(--accent) 18%,transparent)}
+.dev .grow{flex:1;font-weight:600}
+
+/* ---------- Idle ---------- */
+.idle{position:fixed;inset:0;z-index:50;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 1.2s}
+.idle.show{opacity:1;pointer-events:auto}
+.idle .ig{font-size:26px;font-weight:500;color:rgba(255,255,255,.5);margin-bottom:10px}
+.idle .ic{font-size:150px;font-weight:100;letter-spacing:-6px;color:rgba(255,255,255,.82);font-variant-numeric:tabular-nums;line-height:1}
+.idle .id{font-size:20px;color:rgba(255,255,255,.4);margin-top:14px}
+.idle .is{font-size:16px;color:rgba(255,255,255,.3);margin-top:28px;display:flex;gap:22px}
+.toast{position:fixed;left:50%;top:20px;transform:translate(-50%,-140%);z-index:60;padding:12px 18px;border-radius:18px;font-size:14px;font-weight:500;
+  background:rgba(40,40,46,.92);transition:transform .3s,visibility 0s .3s;max-width:90vw;visibility:hidden}
+.toast.show{transform:translate(-50%,0);visibility:visible;transition:transform .3s}
+
+/* ---------- Motion ---------- */
+:root{--spring:cubic-bezier(.34,1.4,.64,1);--ease:cubic-bezier(.2,.8,.2,1)}
+button{transition:transform .35s var(--spring),background-color .3s,color .3s,box-shadow .4s,opacity .3s}
+button:active{transform:scale(.94);transition-duration:.08s}
+.scene:active,.light:active{transform:scale(.97)}
+.chips button,.seg button,.chip{transition:background-color .3s var(--ease),color .3s,transform .35s var(--spring)}
+.prog .fill,.vol .fill,.light .bar i{transition:width .45s var(--ease)}
+.intro .app .glass{animation:rise .7s var(--ease) both;animation-delay:var(--d,0s)}
+@keyframes rise{from{opacity:0;transform:translateY(14px) scale(.985)}}
+.tick{animation:tick .45s var(--spring)}
+@keyframes tick{from{transform:translateY(var(--dy,8px));opacity:.35}}
+.scene.flash{animation:pop .5s var(--spring)}
+@keyframes pop{40%{transform:scale(1.05)}}
+.light.on .art2{animation:glowin .8s var(--ease)}
+@keyframes glowin{from{filter:brightness(1.8)}}
+.music{view-transition-name:music}.wx{view-transition-name:wx}.ac{view-transition-name:ac}.net{view-transition-name:net}
+.offall{view-transition-name:offall}.roomcard{view-transition-name:roomcard}.scenes{view-transition-name:scenes}.lights{view-transition-name:lights}
+::view-transition-group(*){animation-duration:.45s;animation-timing-function:var(--ease)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ---------- Now playing (Apple Music style) ---------- */
+.np{position:fixed;inset:0;z-index:30;display:grid;grid-template-columns:minmax(280px,36%) 1fr;gap:56px;
+  padding:calc(56px + env(safe-area-inset-top)) 56px 40px;opacity:0;pointer-events:none;transform:scale(1.04);
+  transition:opacity .45s var(--ease),transform .55s var(--ease);overflow:hidden;background:#0b0a09}
+.np.open{opacity:1;pointer-events:auto;transform:none}
+.npbg{position:absolute;inset:-25%;z-index:0;background:#2a2622 center/cover;filter:blur(80px) saturate(170%) brightness(.6);animation:drift 26s ease-in-out infinite alternate}
+.npbg2{position:absolute;inset:-25%;z-index:0;background:inherit;background-position:30% 70%;mix-blend-mode:screen;opacity:.35;filter:blur(90px) saturate(180%);animation:drift 33s ease-in-out infinite alternate-reverse}
+@keyframes drift{from{transform:rotate(0) scale(1.1)}to{transform:rotate(14deg) scale(1.3) translate(4%,3%)}}
+.np::after{content:"";position:absolute;inset:0;z-index:0;background:linear-gradient(180deg,rgba(0,0,0,.15),rgba(0,0,0,.45))}
+.np>*{position:relative;z-index:1}
+.np>.npbg{position:absolute;z-index:0}
+.npclose{position:absolute!important;top:calc(16px + env(safe-area-inset-top));left:calc(50% - 24px);width:48px;height:30px;border-radius:15px;background:rgba(255,255,255,.14);display:grid;place-items:center;z-index:2!important}
+.npleft{display:flex;flex-direction:column;justify-content:center;gap:16px;min-height:0}
+.npart{width:100%;max-width:min(100%,46vh);aspect-ratio:1;border-radius:18px;background:rgba(255,255,255,.08) center/cover;box-shadow:0 30px 60px -20px rgba(0,0,0,.7);display:grid;place-items:center;color:rgba(255,255,255,.4);
+  transition:transform .6s var(--spring)}
+.np.paused .npart{transform:scale(.9)}
+.npt{font-size:24px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.npa{font-size:18px;color:rgba(255,255,255,.65);margin-top:-10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.np .prog{background:rgba(255,255,255,.25)}.np .prog .fill,.np .vol .fill{background:#fff}
+.np .times{color:rgba(255,255,255,.6)}
+.np .mctl button{color:rgba(255,255,255,.75)}.np .mctl button.mid{color:#fff}
+.np .mctl button.big{background:#fff;color:#111;width:60px;height:60px;border-radius:30px}
+.np .vrow{color:rgba(255,255,255,.6)}.np .vol{background:rgba(255,255,255,.25)}
+.np .devbtn{background:rgba(255,255,255,.12)}
+.lyr{position:relative;overflow:hidden;min-height:0;-webkit-mask-image:linear-gradient(transparent,#000 14%,#000 72%,transparent);mask-image:linear-gradient(transparent,#000 14%,#000 72%,transparent)}
+.lyrin{transition:transform .9s var(--ease);will-change:transform}
+.ly{font-size:34px;font-weight:800;line-height:1.22;letter-spacing:-.4px;margin:0 0 26px;color:rgba(255,255,255,.3);filter:blur(1.4px);
+  transform-origin:left center;transition:color .6s,filter .6s,transform .6s var(--spring);cursor:pointer;text-align:left;display:block;width:100%}
+.ly.near{filter:blur(.6px)}
+.ly.cur{color:#fff;filter:none;transform:scale(1.04)}
+.ly.dots{letter-spacing:6px}
+.lyr.plain{overflow:auto;-webkit-mask-image:none;mask-image:none}
+.lyr.plain .ly{color:rgba(255,255,255,.8);filter:none;font-size:26px;cursor:default}
+.lymsg{position:absolute;inset:0;display:grid;place-items:center;font-size:20px;color:rgba(255,255,255,.55);text-align:center;padding:24px}
+
+/* ---------- Phone / portrait ---------- */
+@media (max-width:900px),(orientation:portrait){
+  .app{height:auto;min-height:100vh;grid-template-columns:1fr;grid-template-rows:none;grid-template-areas:"head" "music" "main" "ac"}
+  .wx{min-height:220px}
+  .scenes{grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:120px}
+  .lights{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .ac{min-height:560px}
+  .clock{font-size:42px}
+  .np{grid-template-columns:1fr;grid-template-rows:auto 1fr;gap:20px;padding:64px 22px 24px}
+  .npart{max-width:150px}
+  .ly{font-size:26px}
+  .hleft{flex-direction:column;align-items:flex-start;gap:6px}
+  .greet{font-size:18px}
+}
+</style>
+</head>
+<body>
+<div class="room" id="room"></div>
+<div class="app" id="app">
+  <aside class="side">
+  <section class="music glass off tapcard" id="music">
+    <div class="artbg" id="artBg"></div>
+    <div class="mtop"><div class="art" id="art"></div>
+    <div class="minfo"><div class="mtitle" id="mTitle">Spotify</div><div class="martist" id="mArtist">Not connected yet</div></div>
+    <button class="mini" id="mMini" aria-label="Play or pause"></button></div>
+    <div class="pwrap"><div class="prog" id="prog"><div class="fill" id="progFill"></div></div>
+      <div class="times"><span id="tPos">0:00</span><span id="tDur">0:00</span></div></div>
+    <div class="mctl">
+      <button id="mShuf" aria-label="Shuffle"></button>
+      <button class="mid" id="mPrev" aria-label="Previous"></button>
+      <button class="big" id="mPlay" aria-label="Play or pause"></button>
+      <button class="mid" id="mNext" aria-label="Next"></button>
+      <button id="mRep" aria-label="Repeat"></button>
+    </div>
+    <div class="vrow" id="vrow"><span id="vIco"></span><div class="vol" id="vol"><div class="fill" id="volFill"></div></div></div>
+    <button class="devbtn" id="devBtn"><span id="devIco"></span><span style="min-width:0"><div class="dl">Playing on</div><div class="dn" id="devName">Choose a device</div></span></button>
+  </section>
+  <section class="wx glass tapcard" id="wx">
+    <div class="wxnow"><div><div class="wxt" id="wxT">--°</div><div class="wxc" id="wxC">Weather</div></div><div class="wxic" id="wxIc"></div></div>
+    <div class="lab hlab" style="font-size:11px;margin-top:auto">Next hours</div>
+    <div class="hours" id="hours"></div>
+  </section>
+  </aside>
+
+  <header>
+    <div class="hleft"><div class="clock" id="clock">--:--</div><div><div class="greet" id="greet"></div><div class="date" id="date"></div></div></div>
+    <div class="hright">
+      <div id="bats" style="display:flex;gap:8px"></div>
+      <div class="pill glass"><span class="dot" id="conn"></span><span id="connTxt">Connecting</span></div>
+      <button class="iconbtn glass" id="settingsBtn" aria-label="Settings"></button>
+    </div>
+  </header>
+
+  <main class="main">
+    <div class="sechead"><span class="lab">Scenes</span><button class="link" id="editBtn">Edit</button></div>
+    <section class="scenes" id="scenes"></section>
+    <section class="roomcard glass" id="roomCard"><div id="roomMini"></div><button class="rcx" id="roomOpen" aria-label="Full-screen room"></button></section>
+    <div class="sechead"><span class="lab">Lights</span><button class="link" id="allOff">All off</button></div>
+    <section class="lights" id="lights"></section>
+  </main>
+
+  <section class="rcol">
+  <section class="ac glass tapcard" id="ac">
+    <div class="achead"><span class="lab" id="acName">Air conditioner</span><button class="power" id="acPower" aria-label="AC power"></button></div>
+    <div class="dialrow"><button class="step" id="tDown" aria-label="Lower"></button>
+    <div class="dialwrap">
+      <svg class="arc" viewBox="0 0 220 200" id="arcSvg"></svg>
+      <div class="dialc"><div class="big" id="tBig">--<sup>°</sup></div><div class="sub" id="tSub">Room --</div></div>
+    </div>
+    <button class="step" id="tUp" aria-label="Raise"></button></div>
+    <div class="acrow"><div class="lab">Mode</div><div class="chips" id="modes"></div></div>
+    <div class="acrow" id="fanRow"><div class="lab">Fan</div><div class="chips" id="fans"></div></div>
+    <div class="acrow" id="swingRow"><div class="lab">Swing</div><div class="chips" id="swings"></div></div>
+  </section>
+  <section class="net glass" id="net">
+    <div class="nethead"><span class="lab">Internet speed</span><button class="netrun" id="netRun" aria-label="Run speed test"></button></div>
+    <div class="netbig" id="netDown">--<small>Mbps</small></div>
+    <div class="netsub" id="netSub">Not set up yet</div>
+  </section>
+  <button class="offall glass" id="offAll"><span class="oic" id="offIco"></span><span><div class="ot" id="offT">Everything off</div><div class="os" id="offS">Lights, AC and music</div></span></button>
+  </section>
+</div>
+
+<button class="roomexit glass" id="roomExit"></button><div class="roomclock" id="roomClock"></div>
+<div class="scrim" id="scrim"></div>
+<div class="sheet glass" id="sheet"><button class="close" id="sheetClose" aria-label="Close"></button><div id="sheetBody"></div></div>
+<div class="idle" id="idle"><div class="ig" id="iGreet"></div><div class="ic" id="iClock"></div><div class="id" id="iDate"></div><div class="is" id="iSum"></div></div>
+<div class="toast" id="toast"></div>
+<div class="np" id="np">
+  <div class="npbg" id="npBg"><div class="npbg2"></div></div>
+  <button class="npclose" id="npClose" aria-label="Close"></button>
+  <div class="npleft">
+    <div class="npart" id="npArt"></div>
+    <div><div class="npt" id="npTitle"></div><div class="npa" id="npArtist" style="margin-top:4px"></div></div>
+    <div><div class="prog" id="npProg"><div class="fill" id="npProgFill"></div></div><div class="times"><span id="npPos">0:00</span><span id="npDur">0:00</span></div></div>
+    <div class="mctl"><button id="npShuf"></button><button class="mid" id="npPrev"></button><button class="big" id="npPlay"></button><button class="mid" id="npNext"></button><button id="npRep"></button></div>
+    <div class="vrow"><span id="npVIco"></span><div class="vol" id="npVol"><div class="fill" id="npVolFill"></div></div></div>
+    <button class="devbtn" id="npDev"><span id="npDevIco"></span><span style="min-width:0"><div class="dl">Playing on</div><div class="dn" id="npDevName"></div></span></button>
+  </div>
+  <div class="lyr" id="lyr"><div class="lyrin" id="lyrIn"></div><div class="lymsg" id="lyMsg"></div></div>
+</div>
+
+<script>
+/* =====================================================================
+   SETTINGS — entity IDs come from Home Assistant (Settings → Entities).
+   art: which illustration to draw — "bed", "desk", "cove-left", "cove-right"
+   ===================================================================== */
+const CONFIG = {
+  name: "Fahad",         // used in the greeting
+  lights: [
+    { id: "light.bedroom_tapo_l930_ceiling",   name: "Ceiling 1", art: "cove-left" },
+    { id: "light.bedroom_tapo_l930_ceiling_2", name: "Ceiling 2", art: "cove-right" },
+    { id: "light.bedroom_tapo_l930_bed",       name: "Bed",       art: "bed" },
+    { id: "light.bedroom_desk",                name: "Desk",      art: "desk" },
+  ],
+  climate: "climate.panasonic_ac_panasonic_ac",
+  climateName: "Air conditioner",
+  media: "auto",        // "auto" picks the Spotify player
+  weather: "auto",
+  speedtest: "auto",   // uses the Speedtest.net integration sensors
+  motionSensor: "",     // e.g. "binary_sensor.panel_motion" — wakes the screen
+  idleSeconds: 90,
+};
+
+/* Starter scenes (your Tapo shortcuts) — used until you save your own; edits are saved in Home Assistant. */
+const L = CONFIG.lights.map(l => l.id);   // [Ceiling 1, Ceiling 2, Bed, Desk]
+const WARM = { k: 2700 };
+const AC24 = { m: "set", hvac: "cool", t: 24, fan: "" };
+const DEFAULT_SCENES = [
+  { id: "study", name: "Study", icon: "book", lights: { [L[0]]: { m: "off" }, [L[1]]: { m: "off" }, [L[2]]: { m: "off" }, [L[3]]: { m: "on", b: 100, c: WARM } }, ac: AC24 },
+  { id: "wmax", name: "WMax", icon: "sun", lights: { [L[0]]: { m: "on", b: 100, c: WARM }, [L[1]]: { m: "on", b: 100, c: WARM }, [L[2]]: { m: "on", b: 100, c: WARM }, [L[3]]: { m: "on", b: 100, c: WARM } }, ac: AC24 },
+  { id: "max", name: "Max", icon: "bulb", lights: { [L[0]]: { m: "on", b: 100, c: { k: 5000 } }, [L[1]]: { m: "on", b: 100, c: { k: 5000 } }, [L[2]]: { m: "on", b: 100, c: { k: 5000 } }, [L[3]]: { m: "on", b: 100, c: { k: 5000 } } }, ac: AC24 },
+  { id: "sleep", name: "Sleep", icon: "moon", lights: { [L[0]]: { m: "off" }, [L[1]]: { m: "on", b: 2, c: WARM }, [L[2]]: { m: "off" }, [L[3]]: { m: "off" } }, ac: { m: "set", hvac: "cool", t: 22, fan: "", offAfter: 3 } },
+];
+const SCENES_KEY = "homepanel_scenes_v2";
+
+const ACCENTS = [
+  { name: "Oak", c: "#e9c9a0", ink: "#1d140a" },
+  { name: "Mono", c: "#f5f5f7", ink: "#0b0b0d" }, { name: "Ice", c: "#9cccff", ink: "#06121f" },
+  { name: "Ember", c: "#ff7a3d", ink: "#1f0a02" }, { name: "Amber", c: "#ffbf73", ink: "#1f1204" },
+  { name: "Sage", c: "#a8dcbc", ink: "#07170e" }, { name: "Rose", c: "#ffa8ba", ink: "#200810" },
+  { name: "Lavender", c: "#c9b0ff", ink: "#120a24" },
+];
+const BACKDROPS = [
+  { name: "Room", bg1: "#14120f", bg2: "#0d0c0b", room: true },
+  { name: "Graphite", bg1: "#141417", bg2: "#050506" }, { name: "Midnight", bg1: "#0f1626", bg2: "#04060c" },
+  { name: "Black", bg1: "#050505", bg2: "#000000" }, { name: "Mocha", bg1: "#1b1613", bg2: "#070504" },
+];
+const COLORS = [
+  { n: "Warm", k: 2700, bg: "#ffc98a" }, { n: "Soft", k: 3500, bg: "#ffe2b8" }, { n: "Neutral", k: 4200, bg: "#fff3df" },
+  { n: "Day", k: 5000, bg: "#f4f7ff" }, { n: "Cool", k: 6500, bg: "#dbe8ff" },
+  { n: "Red", rgb: [255, 70, 60] }, { n: "Amber", rgb: [255, 150, 40] }, { n: "Green", rgb: [70, 220, 120] },
+  { n: "Blue", rgb: [60, 110, 255] }, { n: "Purple", rgb: [160, 80, 255] },
+];
+const swBg = p => p.bg || `rgb(${p.rgb.join(",")})`;
+
+/* =====================================================================
+   Icons
+   ===================================================================== */
+const P = {
+  bulb:'<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.7.6 1.1 1.3 1.1 2.2h5c0-.9.4-1.6 1.1-2.2A6 6 0 0 0 12 3z"/>',
+  power:'<path d="M12 3v8M7.1 6.3a7 7 0 1 0 9.8 0"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>', minus:'<path d="M5 12h14"/>',
+  gear:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
+  close:'<path d="M6 6l12 12M18 6L6 18"/>',
+  play:'<path d="M8 5l11 7-11 7z" fill="currentColor" stroke="none"/>',
+  pause:'<path d="M8 5h3v14H8zM13 5h3v14h-3z" fill="currentColor" stroke="none"/>',
+  next:'<path d="M6 5l9 7-9 7z" fill="currentColor" stroke="none"/><path d="M18 5v14"/>',
+  prev:'<path d="M18 5l-9 7 9 7z" fill="currentColor" stroke="none"/><path d="M6 5v14"/>',
+  shuffle:'<path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/>',
+  repeat:'<path d="M17 2l4 4-4 4"/><path d="M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4"/><path d="M21 13v2a3 3 0 0 1-3 3H3"/>',
+  vol:'<path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/>',
+  music:'<path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/>',
+  speaker:'<rect x="5" y="2" width="14" height="20" rx="3"/><circle cx="12" cy="14" r="4"/><circle cx="12" cy="6" r="1" fill="currentColor"/>',
+  laptop:'<rect x="4" y="4" width="16" height="11" rx="2"/><path d="M2 19h20"/>',
+  phone:'<rect x="7" y="2" width="10" height="20" rx="3"/><path d="M11 18h2"/>',
+  tablet:'<rect x="4" y="2" width="16" height="20" rx="3"/><path d="M11 18h2"/>',
+  check:'<path d="M5 12l5 5 9-10"/>',
+  edit:'<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13 7l4 4"/>',
+  trash:'<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
+  left:'<path d="M15 5l-7 7 7 7"/>', right:'<path d="M9 5l7 7-7 7"/>',
+  sofa:'<path d="M4 11V8a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v3"/><path d="M2 13a2 2 0 0 1 4 0v2h12v-2a2 2 0 0 1 4 0v4a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2z"/><path d="M6 19v2M18 19v2"/>',
+  target:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/>',
+  film:'<rect x="3" y="4" width="18" height="16" rx="3"/><path d="M7 4v16M17 4v16M3 9h4M3 15h4M17 9h4M17 15h4"/>',
+  moon:'<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>',
+  sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+  book:'<path d="M4 4h6a2 2 0 0 1 2 2v14a2 2 0 0 0-2-2H4zM20 4h-6a2 2 0 0 0-2 2v14a2 2 0 0 1 2-2h6z"/>',
+  coffee:'<path d="M4 9h13v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z"/><path d="M17 11h1a3 3 0 0 1 0 6h-1M8 2v3M12 2v3"/>',
+  game:'<path d="M7 7h10a5 5 0 0 1 5 5v1a3 3 0 0 1-5.4 1.8L15 13H9l-1.6 1.8A3 3 0 0 1 2 13v-1a5 5 0 0 1 5-5z"/><path d="M7 10v3M5.5 11.5h3"/><circle cx="16" cy="10.5" r=".8" fill="currentColor"/><circle cx="17.5" cy="12.5" r=".8" fill="currentColor"/>',
+  bed:'<path d="M3 18V6M3 13h18v5M21 13a3 3 0 0 0-3-3h-7v3"/><circle cx="7" cy="10" r="1.6"/>',
+  sparkle:'<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z"/>',
+  pray:'<path d="M12 3c-2 3-4 4.5-4 8a4 4 0 0 0 8 0c0-3.5-2-5-4-8z"/><path d="M12 15v6M9 21h6"/>',
+  snow:'<path d="M12 2v20M4.9 6.5l14.2 11M19.1 6.5L4.9 17.5"/>',
+  heart:'<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>',
+  cloud:'<path d="M7 18a5 5 0 1 1 .9-9.9A6 6 0 0 1 19 10a4 4 0 0 1-1 8z"/>',
+  pcloud:'<path d="M12 4v1.5M5.6 6.6l1 1M4 12h1.5M17.4 6.6l-1 1"/><path d="M8.5 11a3.5 3.5 0 0 1 6.9-.8"/><path d="M9 20a4 4 0 1 1 .8-7.9A5 5 0 0 1 19 14a3 3 0 0 1-.5 6z"/>',
+  rain:'<path d="M7 15a5 5 0 1 1 .9-9.9A6 6 0 0 1 19 7a4 4 0 0 1-1 8z"/><path d="M8 18l-1 3M12 18l-1 3M16 18l-1 3"/>',
+  bolt:'<path d="M7 15a5 5 0 1 1 .9-9.9A6 6 0 0 1 19 7a4 4 0 0 1-1 8"/><path d="M13 12l-3 5h4l-3 5"/>',
+  fog:'<path d="M4 10h16M4 14h16M6 18h12M7 6h10"/>',
+  wind:'<path d="M3 8h11a3 3 0 1 0-3-3M3 12h16a3 3 0 1 1-3 3M3 16h7"/>',
+  watch:'<rect x="6" y="6" width="12" height="12" rx="3.5"/><path d="M9 6V3h6v3M9 18v3h6v-3"/>',
+  expand:'<path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"/>',
+  down:'<path d="M6 9l6 6 6-6"/>',
+  refresh:'<path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/>',
+};
+const SCENE_ICONS = ["sofa", "target", "film", "moon", "sun", "book", "coffee", "game", "bed", "sparkle", "pray", "snow", "heart", "music", "power", "bulb"];
+const icon = (n, s = 22, w = 1.8) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round">${P[n] || P.sparkle}</svg>`;
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+/* Light illustrations: furniture in thin lines, the LED strip glows in the light's colour. */
+function illustration(kind, uid){
+  const g = `<defs><linearGradient id="gd${uid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="currentColor" stop-opacity=".75"/><stop offset="1" stop-color="currentColor" stop-opacity="0"/></linearGradient>
+    <linearGradient id="gu${uid}" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="currentColor" stop-opacity=".65"/><stop offset="1" stop-color="currentColor" stop-opacity="0"/></linearGradient>
+    <filter id="bl${uid}"><feGaussianBlur stdDeviation="2.2"/></filter></defs>`;
+  const strip = d => `<path class="strip" d="${d}" filter="url(#bl${uid})" opacity=".9"/><path class="strip" d="${d}"/>`;
+  let body = "";
+  if (kind === "bed") body = `
+    <path class="glow" d="M22 52 h96 l8 14 h-112z" fill="url(#gd${uid})"/>
+    <path class="furn fill" d="M20 18 v34 M20 26 q0-8 8-8 h10 v16"/>
+    <rect class="furn fill" x="20" y="34" width="100" height="12" rx="3"/>
+    <path class="furn" d="M38 34 q2-6 14-6 h60 q8 0 8 6"/>
+    <rect class="furn fill" x="24" y="27" width="16" height="7" rx="3.5"/>
+    <path class="furn" d="M20 46 v6 M120 46 v6 M20 52 h100"/>
+    ${strip("M24 53 H116")}`;
+  else if (kind === "desk") body = `
+    <path class="glow" d="M18 10 h104 l4 30 h-112z" fill="url(#gd${uid})"/>
+    <rect class="furn fill" x="14" y="5" width="112" height="4" rx="1.5"/>
+    ${strip("M20 11 H120")}
+    <rect class="furn fill" x="54" y="22" width="32" height="18" rx="2.5"/>
+    <path class="furn" d="M70 40 v3 M64 43 h12"/>
+    <rect class="furn fill" x="22" y="44" width="96" height="4" rx="2"/>
+    <path class="furn" d="M30 48 v16 M110 48 v16"/>`;
+  else {
+    const left = kind === "cove-left";
+    const x1 = left ? 14 : 72, x2 = left ? 68 : 126;
+    body = `
+    <path class="glow" d="M${x1} 20 h${x2 - x1} l6 44 h-${x2 - x1 + 12}z" fill="url(#gd${uid})"/>
+    <path class="furn" d="M6 8 H134"/>
+    <path class="furn fill" d="M14 8 v10 h112 v-10"/>
+    <path class="furn" d="M14 18 v4 M126 18 v4"/>
+    <circle class="furn" cx="70" cy="13" r="2"/>
+    ${strip(`M${x1 + 4} 21 H${x2 - 4}`)}
+    <path class="furn" d="M${left ? 90 : 30} 64 v-14 h20 v14" opacity=".6"/>`;
+  }
+  return `<svg class="ill" viewBox="0 0 140 66" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">${g}${body}</svg>`;
+}
+
+/* =====================================================================
+   Appearance
+   ===================================================================== */
+const store = {
+  get(k, d){ try { const v = localStorage.getItem("panel." + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v){ try { localStorage.setItem("panel." + k, JSON.stringify(v)); } catch {} },
+};
+function applyTheme(){
+  const a = ACCENTS.find(x => x.name === store.get("accent2", "Oak")) || ACCENTS[0];
+  const b = BACKDROPS.find(x => x.name === store.get("backdrop2", "Room")) || BACKDROPS[0];
+  const r = document.documentElement.style;
+  r.setProperty("--accent", a.c); r.setProperty("--accent-ink", a.ink);
+  r.setProperty("--bg1", b.bg1); r.setProperty("--bg2", b.bg2);
+  document.body.classList.toggle("has-room", !!b.room);
+  const room = document.getElementById("room"); if (room) room.style.display = b.room ? "" : "none";
+}
+applyTheme();
+
+/* =====================================================================
+   Home Assistant connection
+   ===================================================================== */
+const DEMO = location.protocol === "file:" || new URLSearchParams(location.search).has("demo");
+const ORIGIN = location.origin, CLIENT_ID = ORIGIN + "/", REDIRECT = ORIGIN + location.pathname;
+let S = {}, ws = null, msgId = 1, pending = {}, subs = {}, retry = 0, forecast = [];
+
+async function tokenRequest(params){
+  const r = await fetch(ORIGIN + "/auth/token", { method: "POST", body: new URLSearchParams({ client_id: CLIENT_ID, ...params }) });
+  if (!r.ok) throw new Error("token " + r.status);
+  const t = await r.json(); t.expires_at = Date.now() + (t.expires_in - 60) * 1000; return t;
+}
+function signIn(){
+  location.href = `${ORIGIN}/auth/authorize?response_type=code&client_id=${encodeURIComponent(CLIENT_ID)}&redirect_uri=${encodeURIComponent(REDIRECT)}&state=p`;
+}
+async function getToken(force){
+  const q = new URLSearchParams(location.search);
+  if (q.get("code")) {
+    const t = await tokenRequest({ grant_type: "authorization_code", code: q.get("code") });
+    store.set("tokens", t); history.replaceState(null, "", REDIRECT); return t.access_token;
+  }
+  let t = store.get("tokens", null);
+  if (!t) { signIn(); throw new Error("signin"); }
+  if (force || Date.now() > t.expires_at) {
+    try { const n = await tokenRequest({ grant_type: "refresh_token", refresh_token: t.refresh_token }); t = { ...n, refresh_token: t.refresh_token }; store.set("tokens", t); }
+    catch (e) { if (/40[01]/.test(String(e))) { store.set("tokens", null); signIn(); } throw e; }
+  }
+  return t.access_token;
+}
+function send(msg){
+  return new Promise((res, rej) => {
+    if (!ws || ws.readyState !== 1) return rej(new Error("offline"));
+    const id = msgId++; pending[id] = { res, rej }; ws.send(JSON.stringify({ id, ...msg }));
+  });
+}
+async function connect(force){
+  setConn(false, "Connecting");
+  let token;
+  try { token = await getToken(force); } catch (e) { if (String(e).includes("signin")) return; return scheduleReconnect(); }
+  ws = new WebSocket(ORIGIN.replace(/^http/, "ws") + "/api/websocket");
+  ws.onmessage = async ev => {
+    const m = JSON.parse(ev.data);
+    if (m.type === "auth_required") ws.send(JSON.stringify({ type: "auth", access_token: token }));
+    else if (m.type === "auth_invalid") { ws.onclose = null; ws.close(); connect(true); }
+    else if (m.type === "auth_ok") {
+      retry = 0; msgId = 1; pending = {}; subs = {};
+      const states = await send({ type: "get_states" });
+      S = {}; states.forEach(s => S[s.entity_id] = s);
+      await send({ type: "subscribe_events", event_type: "state_changed" });
+      subscribeForecast(); loadOokla();
+      await loadScenes();
+      setConn(true); render();
+    }
+    else if (m.type === "result") {
+      const p = pending[m.id]; if (!p) return; delete pending[m.id];
+      m.success ? p.res(m.result) : p.rej(new Error(m.error && m.error.message || "failed"));
+    }
+    else if (m.type === "event" && subs[m.id]) subs[m.id](m.event);
+    else if (m.type === "event" && m.event && m.event.event_type === "state_changed") {
+      const d = m.event.data;
+      if (d.new_state) S[d.entity_id] = d.new_state; else delete S[d.entity_id];
+      if (d.new_state && d.new_state.state === "on" && (CONFIG.motionSensor ? d.entity_id === CONFIG.motionSensor
+          : d.entity_id.startsWith("binary_sensor.") && /occupancy|presence|motion/.test(d.new_state.attributes.device_class || ""))) wake();
+      scheduleRender();
+    }
+  };
+  ws.onclose = () => { setConn(false, "Offline"); scheduleReconnect(); };
+}
+function subscribe(msg, cb){
+  if (!ws || ws.readyState !== 1) return;
+  const id = msgId++; subs[id] = cb; pending[id] = { res(){}, rej(){ delete subs[id]; } };
+  ws.send(JSON.stringify({ id, ...msg }));
+}
+function weatherEntity(){ return CONFIG.weather === "auto" ? Object.keys(S).find(k => k.startsWith("weather.")) : CONFIG.weather; }
+function subscribeForecast(){
+  const id = weatherEntity(); if (!id) return;
+  subscribe({ type: "weather/subscribe_forecast", entity_id: id, forecast_type: "hourly" }, ev => { forecast = (ev && ev.forecast) || []; renderWeather(); });
+}
+function scheduleReconnect(){ retry = Math.min(retry + 1, 6); setTimeout(() => connect(), 500 * 2 ** retry); }
+document.addEventListener("visibilitychange", () => { if (!DEMO && document.visibilityState === "visible" && (!ws || ws.readyState > 1)) connect(); });
+async function call(domain, service, data){
+  if (DEMO) return demoCall(domain, service, data);
+  try { await send({ type: "call_service", domain, service, service_data: data }); }
+  catch (e) { toast("Couldn't do that: " + e.message); }
+}
+function setConn(ok, txt){ $("conn").classList.toggle("ok", ok); $("connTxt").textContent = ok ? (DEMO ? "Demo" : "Live") : txt; }
+
+/* ---- Scenes storage: saved in Home Assistant, so every device sees the same scenes ---- */
+let SCENES = [];
+async function loadScenes(){
+  let v = null;
+  if (DEMO) v = store.get("demoScenes", null);
+  else { try { v = (await send({ type: "frontend/get_user_data", key: SCENES_KEY })).value; } catch {} }
+  SCENES = Array.isArray(v) && v.length ? v : JSON.parse(JSON.stringify(DEFAULT_SCENES));
+  let changed = false;
+  SCENES.forEach(sc => { if (sc.id === "sleep" && sc.ac && sc.ac.m === "set" && sc.ac.offAfter === undefined) { sc.ac.offAfter = 3; changed = true; } });
+  buildScenes();
+  if (changed) saveScenes(); else syncScripts(store.get("scriptsVer", 0) !== 6);
+  store.set("scriptsVer", 6);
+}
+async function saveScenes(){
+  buildScenes();
+  if (DEMO) return store.set("demoScenes", SCENES);
+  try { await send({ type: "frontend/set_user_data", key: SCENES_KEY, value: SCENES }); }
+  catch (e) { toast("Couldn't save scenes: " + e.message); }
+  syncScripts(true);
+}
+
+/* Each scene is also saved as a Home Assistant script (script.panel_<id>),
+   so automations can run it and always use your latest version. */
+const MDI = { book: "mdi:book-open-variant", sun: "mdi:white-balance-sunny", bulb: "mdi:lightbulb-on", moon: "mdi:weather-night", sofa: "mdi:sofa",
+  target: "mdi:target", film: "mdi:movie-open", coffee: "mdi:coffee", game: "mdi:controller", bed: "mdi:bed", power: "mdi:power", music: "mdi:music" };
+const scriptKey = sc => "panel_" + String(sc.id).toLowerCase().replace(/[^a-z0-9_]/g, "_");
+function sceneSequence(sc){
+  const seq = [], lights = sc.lights || {};
+  const offs = Object.keys(lights).filter(id => lights[id].m === "off");
+  if (offs.length) seq.push({ action: "light.turn_off", target: { entity_id: offs } });
+  Object.keys(lights).filter(id => lights[id].m === "on").forEach(id => {
+    const v = lights[id], data = { brightness_pct: v.b ?? 100 };
+    if (v.c && v.c.k) data.color_temp_kelvin = v.c.k; if (v.c && v.c.rgb) data.rgb_color = v.c.rgb;
+    seq.push({ action: "light.turn_on", target: { entity_id: id }, data });
+  });
+  const ac = sc.ac || {};
+  const T = { entity_id: CONFIG.climate };
+  if (ac.m === "off") seq.push({ action: "climate.set_hvac_mode", target: T, data: { hvac_mode: "off" } });
+  if (ac.m === "set") {
+    seq.push({ action: "climate.set_hvac_mode", target: T, data: { hvac_mode: ac.hvac || "cool" } }, { delay: { seconds: 2 } });
+    if (ac.t != null) seq.push({ action: "climate.set_temperature", target: T, data: { temperature: ac.t } });
+    if (ac.fan) seq.push({ delay: { seconds: 2 } }, { action: "climate.set_fan_mode", target: T, data: { fan_mode: ac.fan } });
+    if (ac.offAfter > 0) seq.push({ delay: { hours: ac.offAfter } }, { action: "climate.set_hvac_mode", target: T, data: { hvac_mode: "off" } });
+  }
+  return seq;
+}
+async function api(method, path, body){
+  const token = await getToken();
+  const r = await fetch(ORIGIN + path, { method, headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" }, body: body ? JSON.stringify(body) : undefined });
+  if (!r.ok) throw new Error(path + " " + r.status);
+  return r;
+}
+let syncedOnce = false;
+async function syncScripts(force){
+  if (DEMO || (syncedOnce && !force)) return; syncedOnce = true;
+  try {
+    const keep = new Set(SCENES.map(scriptKey));
+    for (const sc of SCENES) {
+      const key = scriptKey(sc);
+      if (!force && S["script." + key]) continue;
+      await api("POST", `/api/config/script/config/${key}`, { alias: "Panel · " + sc.name, icon: MDI[sc.icon] || "mdi:palette", mode: "restart", sequence: sceneSequence(sc) });
+    }
+    if (force) for (const id of Object.keys(S)) {
+      if (id.startsWith("script.panel_") && !keep.has(id.slice(7))) await api("DELETE", `/api/config/script/config/${id.slice(7)}`).catch(() => {});
+    }
+  } catch (e) { console.warn("script sync", e); }
+}
+
+/* =====================================================================
+   Rendering
+   ===================================================================== */
+let renderQueued = false;
+function scheduleRender(){ if (!renderQueued) { renderQueued = true; requestAnimationFrame(() => { renderQueued = false; render(); }); } }
+function render(){ renderLights(); renderAC(); renderMusic(); renderWeather(); renderNet(); renderBatteries(); renderRoom(); renderIdleSummary(); }
+
+/* ---- Battery levels (from the Home Assistant app on each device) ---- */
+function renderBatteries(){
+  const ids = Object.keys(S).filter(k => /^sensor\..*_battery_level$/.test(k) && (S[k].attributes.unit_of_measurement === "%" || S[k].attributes.device_class === "battery")).slice(0, 4);
+  const items = ids.map(id => {
+    const s = S[id], v = Math.round(parseFloat(s.state)); if (isNaN(v)) return "";
+    const st = S[id.replace(/_level$/, "_state")], chg = st && /charging|full/i.test(st.state) && !/not/i.test(st.state);
+    const name = String(s.attributes.friendly_name || id).replace(/battery level/i, "").replace(/^.*?['’]s\s+/i, "").trim();
+    const w = Math.max(1.5, 13 * v / 100);
+    return `<span class="bi${v <= 20 && !chg ? " low" : ""}">${chg ? '<svg width="10" height="14" viewBox="0 0 10 14"><path d="M6.5 0 1 8h3.5L3 14l6-8.5H5.5z" fill="#5ee08a"/></svg>' : ""}<span class="bn" title="${esc(name)}">${icon(/watch/i.test(id + name) ? "watch" : /ipad|tablet/i.test(name) ? "tablet" : /phone/i.test(name) ? "phone" : "laptop", 16)}</span><span>${v}%</span></span>`;
+  }).join("");
+  const html = items ? `<div class="pill glass bat">${items}</div>` : "";
+  if ($("bats").dataset.h !== html) { $("bats").dataset.h = html; $("bats").innerHTML = html; }
+}
+
+/* ---- Your room, drawn from your video. Its LED strips follow the real lights,
+        and tapping an object controls it (long-press a light for colour). ---- */
+const ROOM_SPOTS = [
+  { key: "l0", light: 0, hit: [0, 0, 800, 150], tag: [480, 150] },
+  { key: "l1", light: 1, hit: [800, 0, 800, 140], tag: [1200, 60] },
+  { key: "ac", hit: [960, 140, 370, 100], tag: [1145, 272] },
+  { key: "l2", light: 2, hit: [250, 490, 620, 340], tag: [560, 465] },
+  { key: "l3", light: 3, hit: [980, 360, 560, 330], tag: [1270, 470] },
+];
+function roomSVG(p, fit){
+  const glow = id => `<linearGradient id="${p}${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".8"/><stop offset=".3" stop-color="#fff" stop-opacity=".28"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>`;
+  const pool = id => `<radialGradient id="${p}${id}" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#fff" stop-opacity=".55"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>`;
+  const u = id => `url(#${p}${id})`;
+  return `<svg viewBox="0 0 1600 1000" preserveAspectRatio="${fit}">
+  <defs>
+    <linearGradient id="${p}wall" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2b2723"/><stop offset="1" stop-color="#211e1b"/></linearGradient>
+    <linearGradient id="${p}floor" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#26221d"/><stop offset="1" stop-color="#15130f"/></linearGradient>
+    <linearGradient id="${p}oak" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9a7a50"/><stop offset="1" stop-color="#6e5536"/></linearGradient>
+    ${glow("gC1")}${glow("gC2")}${glow("gS")}${glow("gB")}${pool("pB")}${pool("pS")}
+    <filter id="${p}soft"><feGaussianBlur stdDeviation="14"/></filter><filter id="${p}wide" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="28"/></filter>
+    <radialGradient id="${p}vig" cx=".5" cy=".45" r=".8"><stop offset=".6" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".55"/></radialGradient>
+  </defs>
+  <rect width="1600" height="1000" fill="${u("wall")}"/>
+  <rect y="820" width="1600" height="180" fill="${u("floor")}"/>
+  <path d="M0 820 H1600" stroke="#3a352e" stroke-width="3"/>
+  <rect width="1600" height="96" fill="#2f2b27"/><rect y="96" width="1600" height="8" fill="#1a1815"/>
+  <g class="lg" data-l="0"><rect x="40" y="104" width="740" height="430" fill="${u("gC1")}" filter="${u("wide")}"/><rect x="20" y="98" width="760" height="6" rx="3" fill="currentColor" filter="${u("soft")}"/></g>
+  <g class="lg" data-l="1"><rect x="820" y="104" width="740" height="430" fill="${u("gC2")}" filter="${u("wide")}"/><rect x="820" y="98" width="760" height="6" rx="3" fill="currentColor" filter="${u("soft")}"/></g>
+  <rect x="0" y="104" width="250" height="716" fill="#36322d"/><path d="M125 104 V820 M0 300 H250" stroke="#26231f" stroke-width="4"/>
+  <path d="M112 520 v60 M138 520 v60 M112 210 v40 M138 210 v40" stroke="#121110" stroke-width="6" stroke-linecap="round"/>
+  <g class="acu"><rect x="980" y="150" width="330" height="72" rx="14" fill="#45413c"/><path d="M995 205 H1295" stroke="#2c2925" stroke-width="3"/><circle class="acled" cx="1285" cy="172" r="5" fill="#5ee08a" opacity="0"/></g>
+  <rect x="420" y="250" width="420" height="300" rx="6" fill="#0b0b0a"/>
+  <g stroke="#26231f" stroke-width="5">${[1, 2, 3, 4, 5, 6, 7].map(i => `<path d="M${420 + i * 52.5} 250 V550"/>`).join("")}<path d="M420 400 H840"/><path d="M560 250 V550 M700 250 V550" stroke-width="10"/></g>
+  <g class="lg" data-l="2"><ellipse cx="560" cy="815" rx="420" ry="80" fill="${u("pB")}"/><rect x="262" y="772" width="596" height="50" fill="${u("gB")}" filter="${u("soft")}"/><rect x="275" y="771" width="570" height="4" rx="2" fill="currentColor"/></g>
+  <rect x="300" y="500" width="520" height="190" rx="18" fill="#3a3733"/>
+  <path d="${Array.from({ length: 10 }, (_, i) => `M${330 + i * 50} 520 V680`).join(" ")}" stroke="#312e2a" stroke-width="3"/>
+  <rect x="270" y="650" width="580" height="74" rx="14" fill="#cfcac2" opacity=".55"/>
+  <rect x="330" y="618" width="170" height="44" rx="20" fill="#dcd7cf" opacity=".6"/><rect x="520" y="618" width="170" height="44" rx="20" fill="#dcd7cf" opacity=".6"/>
+  <rect x="262" y="718" width="596" height="56" rx="10" fill="#2a2825"/>
+  <g class="lg" data-l="3"><rect x="1010" y="398" width="500" height="250" fill="${u("gS")}" filter="${u("wide")}"/><ellipse cx="1270" cy="652" rx="270" ry="34" fill="${u("pS")}"/><rect x="1000" y="397" width="520" height="4" rx="2" fill="currentColor"/></g>
+  <rect x="990" y="380" width="540" height="18" rx="4" fill="${u("oak")}"/>
+  <rect x="1170" y="520" width="200" height="118" rx="8" fill="#0c0c0b" stroke="#3b3834" stroke-width="4"/><rect x="1255" y="638" width="30" height="16" fill="#2c2a27"/>
+  <rect x="1030" y="650" width="480" height="20" rx="4" fill="${u("oak")}"/>
+  <path d="M1080 670 V820 M1460 670 V820 M1050 820 H1110 M1430 820 H1490" stroke="#0e0d0c" stroke-width="12" stroke-linecap="round"/>
+  <path d="M1090 600 q20-40 60-20 v120 h-50 z" fill="#4a4a48"/><path d="M1110 700 v80 M1080 790 h70" stroke="#3a3a38" stroke-width="8" stroke-linecap="round"/>
+  <rect width="1600" height="1000" fill="${u("vig")}"/>
+  <g class="spots">${ROOM_SPOTS.map(s => `<rect class="hit" data-spot="${s.key}" x="${s.hit[0]}" y="${s.hit[1]}" width="${s.hit[2]}" height="${s.hit[3]}" fill="transparent"/>`).join("")}</g>
+  <g class="tags">${ROOM_SPOTS.map(s => `<g class="tag" data-tag="${s.key}" transform="translate(${s.tag[0]},${s.tag[1]})"><rect x="-95" y="-26" width="190" height="52" rx="26"/><circle class="td" cx="-66" cy="0" r="9"/><text class="tn" x="-48" y="-3"></text><text class="ts" x="-48" y="17"></text></g>`).join("")}</g>
+  </svg>`;
+}
+function mountRoom(el, p, fit){
+  el.innerHTML = roomSVG(p, fit);
+  el.querySelectorAll(".hit").forEach(h => {
+    const spot = ROOM_SPOTS.find(s => s.key === h.dataset.spot);
+    bindPress(h, () => spot.light != null ? toggleLight(CONFIG.lights[spot.light].id) : acPower(),
+                 () => spot.light != null ? openLightSheet(spot.light) : setFocus("ac"));
+  });
+}
+function bindPress(el, onTap, onLong){
+  let t = null, long = false, sx = 0, sy = 0;
+  el.addEventListener("pointerdown", e => { long = false; sx = e.clientX; sy = e.clientY; t = setTimeout(() => { long = true; t = null; onLong && onLong(); }, 450); });
+  el.addEventListener("pointermove", e => { if (t && Math.hypot(e.clientX - sx, e.clientY - sy) > 10) { clearTimeout(t); t = null; } });
+  el.addEventListener("pointerup", () => { if (t) { clearTimeout(t); t = null; if (!long) onTap(); } });
+  el.addEventListener("pointercancel", () => { clearTimeout(t); t = null; });
+  el.addEventListener("contextmenu", e => e.preventDefault());
+}
+function renderRoom(){
+  if (!$("room").firstChild) { mountRoom($("room"), "bg", "xMidYMid slice"); mountRoom($("roomMini"), "mini", "xMidYMid meet"); }
+  CONFIG.lights.forEach((l, i) => {
+    const s = S[l.id], on = s && s.state === "on", col = lightColor(s);
+    const op = on ? (0.3 + 0.7 * (s.attributes.brightness || 255) / 255).toFixed(2) : "0";
+    document.querySelectorAll(`.lg[data-l="${i}"]`).forEach(g => { g.style.color = col; g.style.opacity = op; });
+    const ids = [["gC1"], ["gC2"], ["gB", "pB"], ["gS", "pS"]][i] || [];
+    ["bg", "mini"].forEach(p => ids.forEach(id => document.querySelectorAll(`#${p}${id} stop`).forEach(st => st.setAttribute("stop-color", col))));
+    document.querySelectorAll(`.tag[data-tag="l${i}"]`).forEach(t => {
+      t.classList.toggle("on", !!on); t.querySelector(".tn").textContent = l.name;
+      t.querySelector(".ts").textContent = !s ? "Not found" : on ? pctOf(s) + "%" : "Off";
+      t.querySelector(".td").style.fill = on ? col : "rgba(255,255,255,.25)";
+    });
+  });
+  const ac = S[CONFIG.climate], acOn = ac && ac.state !== "off" && ac.state !== "unavailable";
+  document.querySelectorAll(".acled").forEach(c => c.setAttribute("opacity", acOn ? "1" : "0"));
+  document.querySelectorAll('.tag[data-tag="ac"]').forEach(t => {
+    t.classList.toggle("on", !!acOn); t.querySelector(".tn").textContent = "AC";
+    t.querySelector(".ts").textContent = !ac ? "Not found" : acOn ? fmtT(ac.attributes.temperature) + "° " + (MODE_LABEL[ac.state] || nice(ac.state)) : "Off";
+    t.querySelector(".td").style.fill = acOn ? "#8ec5ff" : "rgba(255,255,255,.25)";
+  });
+}
+const nice = v => String(v).replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+
+/* ---- Lights ---- */
+function lightColor(s){
+  const a = (s && s.attributes) || {};
+  if (a.rgb_color) return `rgb(${a.rgb_color.join(",")})`;
+  if (a.color_temp_kelvin) { const k = a.color_temp_kelvin; return k < 3300 ? "#ffc27a" : k < 4500 ? "#ffe9c4" : "#e3eeff"; }
+  return "#ffe9c4";
+}
+function buildLights(){
+  const wrap = $("lights"); wrap.innerHTML = "";
+  CONFIG.lights.forEach((l, i) => {
+    const el = document.createElement("button");
+    el.className = "light glass"; el.id = "L" + i;
+    el.innerHTML = `<div class="art2">${illustration(l.art, i)}</div><div class="ln">${esc(l.name)}</div><div class="ls">Off</div><div class="bar"><i></i></div>`;
+    let timer = null, long = false, sx = 0, sy = 0;
+    el.addEventListener("pointerdown", e => { long = false; sx = e.clientX; sy = e.clientY; el.classList.add("press");
+      timer = setTimeout(() => { long = true; el.classList.remove("press"); openLightSheet(i); }, 450); });
+    el.addEventListener("pointermove", e => { if (timer && Math.hypot(e.clientX - sx, e.clientY - sy) > 10) { clearTimeout(timer); timer = null; el.classList.remove("press"); } });
+    const up = () => { el.classList.remove("press"); if (timer) { clearTimeout(timer); timer = null; if (!long) toggleLight(l.id); } };
+    el.addEventListener("pointerup", up);
+    el.addEventListener("pointercancel", () => { clearTimeout(timer); timer = null; el.classList.remove("press"); });
+    el.addEventListener("contextmenu", e => e.preventDefault());
+    wrap.appendChild(el);
+  });
+}
+function toggleLight(id){ const s = S[id]; if (s) call("light", s.state === "on" ? "turn_off" : "turn_on", { entity_id: id }); }
+const pctOf = s => s && s.state === "on" ? Math.max(1, Math.round((s.attributes.brightness || 255) / 2.55)) : 0;
+function renderLights(){
+  CONFIG.lights.forEach((l, i) => {
+    const el = $("L" + i), s = S[l.id]; if (!el) return;
+    el.classList.toggle("unavail", !s || s.state === "unavailable");
+    const on = !!s && s.state === "on";
+    el.classList.toggle("on", on);
+    el.style.setProperty("--lc", lightColor(s));
+    el.querySelector(".ls").textContent = !s ? "Not found" : s.state === "unavailable" ? "Unavailable" : on ? pctOf(s) + "%" : "Off";
+    el.querySelector(".bar i").style.width = pctOf(s) + "%";
+  });
+  if (sheetMode && sheetMode.type === "light") refreshLightSheet();
+}
+
+/* ---- Scenes ---- */
+let editing = false;
+function sceneSummary(sc){
+  const on = CONFIG.lights.filter(l => sc.lights && sc.lights[l.id] && sc.lights[l.id].m === "on").map(l => l.name);
+  const allOff = CONFIG.lights.every(l => sc.lights && sc.lights[l.id] && sc.lights[l.id].m === "off");
+  const parts = [on.length ? on.join(", ") : allOff ? "Lights off" : ""];
+  if (sc.ac && sc.ac.m === "off") parts.push("AC off");
+  if (sc.ac && sc.ac.m === "set") parts.push("AC " + (sc.ac.t ?? "") + "°" + (sc.ac.offAfter ? ` · off after ${sc.ac.offAfter} h` : ""));
+  return parts.filter(Boolean).join(" · ") || "No changes yet";
+}
+function buildScenes(){
+  const wrap = $("scenes"); wrap.innerHTML = "";
+  wrap.classList.toggle("editing", editing);
+  SCENES.forEach((sc, i) => {
+    const b = document.createElement("button");
+    b.className = "scene glass";
+    b.innerHTML = `<div class="sic">${icon(sc.icon, 24)}</div><div class="sn">${esc(sc.name)}</div><span class="ed">${icon("edit", 16, 2)}</span>`;
+    b.onclick = () => {
+      if (editing) return openSceneEditor(i);
+      b.classList.add("flash"); setTimeout(() => b.classList.remove("flash"), 700);
+      runScene(sc);
+    };
+    wrap.appendChild(b);
+  });
+  if (editing || SCENES.length === 0) {
+    const add = document.createElement("button");
+    add.className = "scene glass add";
+    add.innerHTML = `<div class="sic">${icon("plus", 22)}</div><span>New scene</span>`;
+    add.onclick = () => openSceneEditor(-1);
+    wrap.appendChild(add);
+  }
+  const n = wrap.children.length;
+  const narrow = window.matchMedia("(max-width:900px),(orientation:portrait)").matches, cols = narrow ? 2 : Math.min(Math.max(n, 1), 5);
+  wrap.style.gridTemplateColumns = `repeat(${cols},minmax(0,1fr))`;
+  wrap.style.gridTemplateRows = "";
+  $("editBtn").textContent = editing ? "Done" : "Edit";
+  $("editBtn").classList.toggle("on", editing);
+}
+function runScene(sc){
+  // Stop any other running scene (e.g. a pending AC sleep timer), then run this one in Home Assistant.
+  const key = "script." + scriptKey(sc);
+  if (!DEMO) Object.keys(S).filter(id => id.startsWith("script.panel_") && id !== key && S[id].state === "on").forEach(id => call("script", "turn_off", { entity_id: id }));
+  if (!DEMO && S[key]) return call("script", "turn_on", { entity_id: key });
+  runSceneDirect(sc);
+}
+function runSceneDirect(sc){
+  const lights = sc.lights || {};
+  const offs = Object.keys(lights).filter(id => lights[id].m === "off");
+  if (offs.length) call("light", "turn_off", { entity_id: offs });
+  Object.keys(lights).filter(id => lights[id].m === "on").forEach(id => {
+    const v = lights[id], d = { entity_id: id, brightness_pct: v.b ?? 100 };
+    if (v.c && v.c.k) d.color_temp_kelvin = v.c.k;
+    if (v.c && v.c.rgb) d.rgb_color = v.c.rgb;
+    call("light", "turn_on", d);
+  });
+  const ac = sc.ac || { m: "skip" }, ent = CONFIG.climate;
+  if (ac.m === "off") acOff();
+  if (ac.m === "set") {
+    const mode = ac.hvac || "cool";
+    call("climate", "set_hvac_mode", { entity_id: ent, hvac_mode: mode });           // switches the AC on
+    if (ac.t != null) setTimeout(() => call("climate", "set_temperature", { entity_id: ent, temperature: ac.t }), 1800);
+    if (ac.fan) setTimeout(() => call("climate", "set_fan_mode", { entity_id: ent, fan_mode: ac.fan }), 3600);
+  }
+}
+
+/* ---- AC ---- */
+const MODE_LABEL = { off: "Off", cool: "Cool", dry: "Dry", fan_only: "Fan", heat: "Heat", heat_cool: "Auto", auto: "Auto" };
+let pendingTemp = null, tempTimer = null;
+const fmtT = t => t == null ? "--" : (Math.round(t * 10) / 10) % 1 === 0 ? String(Math.round(t)) : (Math.round(t * 10) / 10).toFixed(1);
+function arcPath(f){
+  const cx = 110, cy = 108, r = 90, a0 = 135, a1 = 135 + 270 * Math.max(0.001, Math.min(1, f));
+  const p = a => [cx + r * Math.cos(a * Math.PI / 180), cy + r * Math.sin(a * Math.PI / 180)];
+  const [x0, y0] = p(a0), [x1, y1] = p(a1);
+  return `M${x0.toFixed(1)} ${y0.toFixed(1)} A${r} ${r} 0 ${a1 - a0 > 180 ? 1 : 0} 1 ${x1.toFixed(1)} ${y1.toFixed(1)}`;
+}
+function drawArc(f, minT, maxT){
+  const k = Math.max(0, Math.min(1, f)), a = (135 + 270 * k) * Math.PI / 180;
+  let ticks = "";
+  for (let i = 0; i <= 28; i++) { const ang = (135 + 270 * i / 28) * Math.PI / 180, r1 = 72, r2 = i % 7 === 0 ? 64 : 68;
+    ticks += `<line class="tick" x1="${(110 + r1 * Math.cos(ang)).toFixed(1)}" y1="${(108 + r1 * Math.sin(ang)).toFixed(1)}" x2="${(110 + r2 * Math.cos(ang)).toFixed(1)}" y2="${(108 + r2 * Math.sin(ang)).toFixed(1)}" stroke-width="1.5" stroke-linecap="round"/>`; }
+  $("arcSvg").innerHTML = `<path class="trk" d="${arcPath(1)}" fill="none" stroke-width="12" stroke-linecap="round"/>
+    <path class="val" d="${arcPath(k)}" fill="none" stroke-width="12" stroke-linecap="round"/>${ticks}
+    <circle cx="${(110 + 90 * Math.cos(a)).toFixed(1)}" cy="${(108 + 90 * Math.sin(a)).toFixed(1)}" r="9" fill="var(--bg2)" stroke="var(--accent)" stroke-width="4"/>
+    <text x="40" y="196" fill="rgba(245,245,247,.45)" font-size="12" text-anchor="middle">${minT}°</text>
+    <text x="180" y="196" fill="rgba(245,245,247,.45)" font-size="12" text-anchor="middle">${maxT}°</text>`;
+}
+function renderChips(el, options, current, onPick, labels){
+  const key = options.join("|") + "#" + current; if (el.dataset.k === key) return; el.dataset.k = key; el.innerHTML = "";
+  options.forEach(o => { const b = document.createElement("button"); b.textContent = (labels && labels[o]) || nice(o);
+    if (o === current) b.className = "sel"; b.onclick = () => onPick(o); el.appendChild(b); });
+}
+function renderAC(){
+  const s = S[CONFIG.climate], card = $("ac");
+  card.classList.toggle("unavail", !s || s.state === "unavailable");
+  if (!s) { $("tSub").textContent = "AC not found"; drawArc(0, 16, 30); return; }
+  const a = s.attributes, off = s.state === "off", minT = a.min_temp ?? 16, maxT = a.max_temp ?? 30;
+  card.classList.toggle("off", off); $("acPower").classList.toggle("on", !off);
+  const t = pendingTemp ?? a.temperature;
+  const tTxt = fmtT(t) + "<sup>°C</sup>";
+  if ($("tBig").innerHTML !== tTxt) { const up = t > ($("tBig").dataset.v ?? t); $("tBig").innerHTML = tTxt; $("tBig").dataset.v = t;
+    $("tBig").style.setProperty("--dy", up ? "10px" : "-10px"); $("tBig").classList.remove("tick"); void $("tBig").offsetWidth; $("tBig").classList.add("tick"); }
+  drawArc(t == null ? 0 : (t - minT) / (maxT - minT), minT, maxT);
+  const room = a.current_temperature != null ? `Room ${Math.round(a.current_temperature)}°` : "";
+  $("tSub").textContent = [room, off ? "Off" : MODE_LABEL[s.state] || nice(s.state)].filter(Boolean).join(" · ");
+  renderChips($("modes"), (a.hvac_modes || []).filter(m => m !== "off"), s.state, m => call("climate", "set_hvac_mode", { entity_id: CONFIG.climate, hvac_mode: m }), MODE_LABEL);
+  $("fanRow").hidden = !a.fan_modes;
+  if (a.fan_modes) renderChips($("fans"), a.fan_modes, a.fan_mode, m => call("climate", "set_fan_mode", { entity_id: CONFIG.climate, fan_mode: m }));
+  $("swingRow").hidden = !a.swing_modes;
+  if (a.swing_modes) renderChips($("swings"), a.swing_modes, a.swing_mode, m => call("climate", "set_swing_mode", { entity_id: CONFIG.climate, swing_mode: m }));
+}
+function stepTemp(dir){
+  const s = S[CONFIG.climate]; if (!s) return;
+  const a = s.attributes, step = a.target_temp_step || 1, cur = pendingTemp ?? a.temperature ?? 24;
+  pendingTemp = Math.max(a.min_temp ?? 16, Math.min(a.max_temp ?? 30, Math.round((cur + dir * step) * 10) / 10));
+  renderAC(); clearTimeout(tempTimer);
+  tempTimer = setTimeout(async () => {
+    const v = pendingTemp; await call("climate", "set_temperature", { entity_id: CONFIG.climate, temperature: v });
+    setTimeout(() => { if (pendingTemp === v) { pendingTemp = null; renderAC(); } }, 2500);
+  }, 700);
+}
+function acPower(){
+  const s = S[CONFIG.climate]; if (!s) return;
+  if (s.state === "off") { const m = s.attributes.hvac_modes || []; call("climate", "set_hvac_mode", { entity_id: CONFIG.climate, hvac_mode: m.includes("cool") ? "cool" : m.find(x => x !== "off") }); }
+  else acOff();
+}
+/* Full power-off. Some AC integrations treat turn_off as "display off", so use the Off mode instead. */
+function acOff(){
+  call("climate", "set_hvac_mode", { entity_id: CONFIG.climate, hvac_mode: "off" });
+  setTimeout(() => { const s = S[CONFIG.climate]; if (s && s.state !== "off") call("climate", "turn_off", { entity_id: CONFIG.climate }); }, 5000);
+}
+
+/* ---- Music (Spotify) ---- */
+function mediaEntity(){
+  if (CONFIG.media !== "auto") return CONFIG.media;
+  const ids = Object.keys(S).filter(k => k.startsWith("media_player."));
+  return ids.find(k => k.includes("spotify")) || null;
+}
+const mmss = s => { s = Math.max(0, Math.floor(s || 0)); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); };
+function devIcon(name){ const n = String(name || "").toLowerCase();
+  return /iphone|phone|pixel|galaxy/.test(n) ? "phone" : /ipad|tablet/.test(n) ? "tablet" : /pc|desktop|laptop|mac|windows|computer/.test(n) ? "laptop" : "speaker"; }
+function position(s){
+  const a = s.attributes; if (a.media_position == null) return 0;
+  let p = a.media_position;
+  if (s.state === "playing" && a.media_position_updated_at) p += (Date.now() - Date.parse(a.media_position_updated_at)) / 1000;
+  return Math.min(p, a.media_duration || p);
+}
+function renderMusic(){
+  const id = mediaEntity(), s = id && S[id], box = $("music");
+  const ok = !!s && s.state !== "unavailable";
+  box.classList.toggle("off", !ok);
+  if (!ok) {
+    $("mTitle").textContent = "Spotify"; $("mArtist").textContent = s ? "Unavailable" : "Not connected yet";
+    $("art").style.backgroundImage = ""; $("art").innerHTML = icon("music", 40, 1.4);
+    $("devName").textContent = "Set up Spotify first"; $("devIco").innerHTML = icon("speaker", 20); return;
+  }
+  const a = s.attributes;
+  const idle = s.state === "idle" || s.state === "off";
+  $("mTitle").textContent = a.media_title || (idle ? "Nothing playing" : nice(s.state));
+  $("mArtist").textContent = a.media_artist || (idle ? "Pick a device and press play" : "");
+  const pic = a.entity_picture;
+  const url = pic ? (pic.startsWith("http") ? pic : ORIGIN + pic) : "";
+  if ($("art").dataset.u !== url) { $("art").dataset.u = url; $("art").style.backgroundImage = $("artBg").style.backgroundImage = url ? `url("${url}")` : ""; $("art").innerHTML = url ? "" : icon("music", 40, 1.4); }
+  $("mPlay").innerHTML = icon(s.state === "playing" ? "pause" : "play", 22);
+  $("mMini").innerHTML = icon(s.state === "playing" ? "pause" : "play", 18);
+  $("mShuf").classList.toggle("act", !!a.shuffle);
+  $("mRep").classList.toggle("act", a.repeat && a.repeat !== "off");
+  if (!drag.has("vol")) $("volFill").style.width = Math.round((a.volume_level ?? 0) * 100) + "%";
+  $("devName").textContent = a.source || "Choose a device";
+  $("devIco").innerHTML = icon(devIcon(a.source), 20);
+  renderNP(); renderProgress();
+}
+/* ---- Now playing + synced lyrics (from LRCLIB, a free community lyrics library) ---- */
+function renderNP(){
+  const id = mediaEntity(), s = id && S[id]; if (!s) return;
+  const a = s.attributes, url = $("art").dataset.u || "";
+  $("npTitle").textContent = a.media_title || "Nothing playing";
+  $("npArtist").textContent = a.media_artist || "";
+  if ($("npArt").dataset.u !== url) { $("npArt").dataset.u = url; $("npArt").style.backgroundImage = $("npBg").style.backgroundImage = url ? `url("${url}")` : ""; $("npArt").innerHTML = url ? "" : icon("music", 60, 1.2); }
+  $("np").classList.toggle("paused", s.state !== "playing");
+  $("npPlay").innerHTML = icon(s.state === "playing" ? "pause" : "play", 26);
+  $("npShuf").classList.toggle("act", !!a.shuffle); $("npRep").classList.toggle("act", a.repeat && a.repeat !== "off");
+  if (!drag.has("npVol")) $("npVolFill").style.width = Math.round((a.volume_level ?? 0) * 100) + "%";
+  $("npDevName").textContent = a.source || "Choose a device"; $("npDevIco").innerHTML = icon(devIcon(a.source), 20);
+  if ($("np").classList.contains("open")) loadLyrics(a);
+}
+let LY = { key: "", lines: [], plain: false, cur: -2 };
+function parseLRC(txt){
+  const out = [];
+  txt.split(/\r?\n/).forEach(row => {
+    const times = [...row.matchAll(/\[(\d+):(\d+(?:\.\d+)?)\]/g)];
+    const text = row.replace(/\[[^\]]*\]/g, "").trim();
+    times.forEach(m => out.push({ t: +m[1] * 60 + +m[2], text }));
+  });
+  return out.sort((x, y) => x.t - y.t);
+}
+async function loadLyrics(a){
+  const key = (a.media_title || "") + "|" + (a.media_artist || "");
+  if (!a.media_title || LY.key === key) return;
+  LY = { key, lines: [], plain: false, cur: -2 };
+  $("lyrIn").innerHTML = ""; $("lyrIn").style.transform = ""; $("lyr").classList.remove("plain"); $("lyMsg").textContent = "Finding lyrics…";
+  const artist = String(a.media_artist || "").split(/,|&| feat\.? /i)[0].trim();
+  const q = new URLSearchParams({ track_name: a.media_title, artist_name: artist });
+  if (a.media_album_name) q.set("album_name", a.media_album_name);
+  if (a.media_duration) q.set("duration", Math.round(a.media_duration));
+  let hit = DEMO ? { syncedLyrics: DEMO_LRC } : null;
+  if (!DEMO) try { const r = await fetch("https://lrclib.net/api/get?" + q); if (r.ok) hit = await r.json(); } catch {}
+  if (!hit || (!hit.syncedLyrics && !hit.plainLyrics)) {
+    try { const r = await fetch("https://lrclib.net/api/search?" + new URLSearchParams({ track_name: a.media_title, artist_name: artist }));
+      if (r.ok) { const list = await r.json(); hit = list.find(x => x.syncedLyrics) || list.find(x => x.plainLyrics) || hit; } } catch {}
+  }
+  if (LY.key !== key) return;                      // song changed while loading
+  if (hit && hit.instrumental) return void ($("lyMsg").textContent = "Instrumental");
+  if (hit && hit.syncedLyrics) LY.lines = parseLRC(hit.syncedLyrics);
+  else if (hit && hit.plainLyrics) { LY.plain = true; LY.lines = hit.plainLyrics.split(/\n/).map(text => ({ t: null, text: text.trim() })); }
+  if (!LY.lines.length) return void ($("lyMsg").textContent = "No lyrics found for this song");
+  $("lyMsg").textContent = "";
+  $("lyr").classList.toggle("plain", LY.plain);
+  $("lyrIn").innerHTML = LY.lines.map((l, i) => `<button class="ly${l.text ? "" : " dots"}" data-i="${i}">${l.text ? esc(l.text) : "• • •"}</button>`).join("");
+  if (!LY.plain) $("lyrIn").querySelectorAll(".ly").forEach(b => b.onclick = () => {
+    const t = LY.lines[b.dataset.i].t; mOpt((st, at) => { at.media_position = t; at.media_position_updated_at = new Date().toISOString(); });
+    mcall("media_seek", { seek_position: Math.round(t) }); LY.cur = -2; syncLyrics();
+  });
+  syncLyrics();
+}
+function syncLyrics(){
+  if (LY.plain || !LY.lines.length || !$("np").classList.contains("open")) return;
+  const s = S[mediaEntity()]; if (!s) return;
+  const pos = position(s) + 0.35;
+  let i = -1; for (let k = 0; k < LY.lines.length; k++) { if (LY.lines[k].t <= pos) i = k; else break; }
+  if (i === LY.cur) return; LY.cur = i;
+  const els = $("lyrIn").children;
+  for (let k = 0; k < els.length; k++) { els[k].classList.toggle("cur", k === i); els[k].classList.toggle("near", Math.abs(k - i) === 1); }
+  const target = els[Math.max(i, 0)];
+  if (target) $("lyrIn").style.transform = `translateY(${-(target.offsetTop - $("lyr").clientHeight * .32)}px)`;
+}
+setInterval(syncLyrics, 250);
+function openNP(){ renderNP(); const id = mediaEntity(); if (id && S[id]) loadLyrics(S[id].attributes); LY.cur = -2; $("np").classList.add("open"); setTimeout(syncLyrics, 60); }
+function closeNP(){ $("np").classList.remove("open"); }
+
+function renderProgress(){
+  const id = mediaEntity(), s = id && S[id]; if (!s || drag.has("prog")) return;
+  const dur = s.attributes.media_duration || 0, p = position(s);
+  $("progFill").style.width = dur ? (p / dur * 100).toFixed(2) + "%" : "0";
+  $("tPos").textContent = mmss(p); $("tDur").textContent = dur ? "-" + mmss(dur - p) : "0:00";
+  if ($("np").classList.contains("open") && !drag.has("npProg")) {
+    $("npProgFill").style.width = dur ? (p / dur * 100).toFixed(2) + "%" : "0";
+    $("npPos").textContent = mmss(p); $("npDur").textContent = dur ? "-" + mmss(dur - p) : "0:00";
+  }
+}
+const drag = new Set();
+function bindBar(el, key, onDone, fill){
+  let pct = 0;
+  const at = e => { const r = el.getBoundingClientRect(); return Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)); };
+  el.addEventListener("pointerdown", e => { el.setPointerCapture(e.pointerId); drag.add(key); pct = at(e); fill.style.width = pct * 100 + "%"; });
+  el.addEventListener("pointermove", e => { if (drag.has(key)) { pct = at(e); fill.style.width = pct * 100 + "%"; } });
+  const end = () => { if (drag.has(key)) { drag.delete(key); onDone(pct); } };
+  el.addEventListener("pointerup", end); el.addEventListener("pointercancel", end);
+}
+function mcall(svc, extra){ const id = mediaEntity(); if (id) { call("media_player", svc, { entity_id: id, ...extra }); refreshMedia(1200); } }
+/* Spotify only reports changes every ~30 s, so the panel updates itself straight away
+   and then asks Home Assistant to re-check Spotify. */
+function mOpt(fn){ const id = mediaEntity(), s = id && S[id]; if (!s) return; fn(s, s.attributes); renderMusic(); }
+let refreshT = null;
+function refreshMedia(ms){
+  clearTimeout(refreshT);
+  refreshT = setTimeout(() => { const id = mediaEntity(); if (id && !DEMO) send({ type: "call_service", domain: "homeassistant", service: "update_entity", service_data: { entity_id: id } }).catch(() => {}); }, ms);
+}
+setInterval(() => { if (!DEMO && document.visibilityState === "visible" && !$("idle").classList.contains("show") && mediaEntity()) refreshMedia(0); }, 12000);
+function playPause(){
+  const id = mediaEntity(), s = id && S[id];
+  if (!s) return openDevices();
+  const a = s.attributes, active = (s.state === "playing" || s.state === "paused") && a.source;
+  if (active) {
+    mOpt((st, at) => { at.media_position = position(st); at.media_position_updated_at = new Date().toISOString(); st.state = st.state === "playing" ? "paused" : "playing"; });
+    return mcall("media_play_pause");
+  }
+  // Nothing is playing anywhere: wake up a device and resume your last music.
+  const list = a.source_list || [], last = store.get("lastDevice", null);
+  const dev = list.includes(last) ? last : list.find(d => /pc|desktop|laptop|windows|computer/i.test(d)) || list[0];
+  if (!dev) { toast("Open Spotify on your PC or phone first"); return openDevices(); }
+  toast("Starting music on " + dev);
+  mOpt((st, at) => { at.source = dev; st.state = "playing"; });
+  mcall("select_source", { source: dev });
+  setTimeout(() => mcall("media_play"), 1800);
+}
+function openDevices(){
+  const id = mediaEntity(), s = id && S[id];
+  if (!s) return openSheet(`<h3>Spotify</h3><p class="hint">Spotify isn't connected to Home Assistant yet. Once it is, your phone, PC and speakers show up here.</p>`);
+  const list = s.attributes.source_list || [], cur = s.attributes.source;
+  openSheet(`<h3>Play on</h3><p class="hint">Devices with Spotify open appear here. On your PC, keep the Spotify app running for the desk speakers.</p>
+    <div class="sect devlist">${list.length ? list.map((d, i) => `<button class="dev${d === cur ? " sel" : ""}" data-i="${i}">${icon(devIcon(d), 22)}<span class="grow">${esc(d)}</span>${d === cur ? icon("check", 20, 2.2) : ""}</button>`).join("")
+      : `<p class="hint">No devices found. Open Spotify on your PC or phone, then try again.</p>`}</div>`);
+  $("sheetBody").querySelectorAll(".dev").forEach(b => b.onclick = () => {
+    const d = list[b.dataset.i]; store.set("lastDevice", d);
+    mOpt(st => { st.attributes.source = d; }); mcall("select_source", { source: d });
+    if (S[mediaEntity()].state !== "playing") setTimeout(() => mcall("media_play"), 1800);
+    closeSheet(); toast("Playing on " + d);
+  });
+}
+
+/* ---- Weather ---- */
+const WICON = { sunny: "sun", "clear-night": "moon", partlycloudy: "pcloud", cloudy: "cloud", rainy: "rain", pouring: "rain",
+  lightning: "bolt", "lightning-rainy": "bolt", fog: "fog", windy: "wind", "windy-variant": "wind", snowy: "snow", hail: "rain", exceptional: "sparkle" };
+const WNAME = { partlycloudy: "Partly cloudy", "clear-night": "Clear", "lightning-rainy": "Thunderstorms", "windy-variant": "Windy", pouring: "Heavy rain" };
+function renderWeather(){
+  const id = weatherEntity(), s = id && S[id];
+  if (!s) { $("wxT").textContent = "--°"; $("wxC").textContent = "No weather service"; $("hours").innerHTML = ""; return; }
+  const a = s.attributes;
+  $("wxT").textContent = Math.round(a.temperature) + "°";
+  $("wxC").textContent = (WNAME[s.state] || nice(s.state)) + (a.humidity != null ? ` · ${Math.round(a.humidity)}% humidity` : "");
+  $("wxIc").innerHTML = icon(WICON[s.state] || "cloud", 40, 1.3);
+  const now = Date.now() - 30 * 60000;
+  const next = forecast.filter(f => Date.parse(f.datetime) >= now).slice(0, focus === "wx" ? 15 : focus === "music" ? 0 : 10);
+  const key = focus + next.map(f => f.datetime + f.temperature + f.condition).join();
+  if ($("hours").dataset.k === key) return; $("hours").dataset.k = key;
+  $("hours").innerHTML = next.map(f => {
+    const d = new Date(f.datetime);
+    const h = d.toLocaleTimeString([], { hour: "numeric" }).replace(/\s?([AP])M/i, (m, x) => x.toLowerCase());
+    const rain = f.precipitation_probability != null ? (f.precipitation_probability >= 20 ? f.precipitation_probability + "%" : "") : (f.precipitation ? f.precipitation + "mm" : "");
+    return `<div class="hr"><span>${h}</span>${icon(WICON[f.condition] || "cloud", 20, 1.6)}<b>${Math.round(f.temperature)}°</b><span class="rain">${rain}</span></div>`;
+  }).join("") || `<div class="hint" style="grid-column:1/-1;font-size:13px;color:var(--muted)">Loading forecast…</div>`;
+}
+
+/* ---- Internet speed (Speedtest.net integration) ---- */
+function speedIds(){
+  const ids = Object.keys(S).filter(k => k.startsWith("sensor.") && k.includes("speedtest"));
+  return { down: ids.find(k => k.includes("download")), up: ids.find(k => k.includes("upload")), ping: ids.find(k => k.includes("ping")) };
+}
+const num = s => s && !isNaN(parseFloat(s.state)) ? parseFloat(s.state) : null;
+function ago(iso){ const m = Math.round((Date.now() - Date.parse(iso)) / 60000); return m < 1 ? "just now" : m < 60 ? m + " min ago" : Math.round(m / 60) + " h ago"; }
+let netTesting = false;
+/* Preferred source: Ookla's official speed test, run on the mini PC (writes /local/speed.json).
+   Falls back to the Speedtest.net integration sensors if that isn't set up. */
+let ookla = null;
+async function loadOokla(){
+  if (DEMO) return;
+  try { const r = await fetch(ORIGIN + "/local/speed.json?t=" + Date.now(), { cache: "no-store" }); if (r.ok) { const j = await r.json(); if (j.download) ookla = j; } } catch {}
+  renderNet();
+}
+function renderNet(){
+  if (ookla) {
+    const mb = b => Math.round(b * 8 / 1e6);
+    $("netDown").innerHTML = mb(ookla.download.bandwidth) + "<small>Mbps</small>";
+    $("netSub").innerHTML = `<span>↑ <b>${mb(ookla.upload.bandwidth)}</b></span><span><b>${Math.round(ookla.ping.latency)}</b> ms</span><span>${ago(ookla.timestamp)}</span>`;
+    return;
+  }
+  const ids = speedIds(), d = num(S[ids.down]), u = num(S[ids.up]), p = num(S[ids.ping]);
+  if (!ids.down) { $("netDown").innerHTML = `--<small>Mbps</small>`; $("netSub").textContent = "Speed test not set up"; return; }
+  $("netDown").innerHTML = (d == null ? "--" : Math.round(d)) + "<small>Mbps</small>";
+  $("netSub").innerHTML = `<span>↑ <b>${u == null ? "--" : Math.round(u)}</b></span><span><b>${p == null ? "--" : Math.round(p)}</b> ms</span><span>${S[ids.down] ? ago(S[ids.down].last_updated) : ""}</span>`;
+}
+function runSpeedtest(){
+  if (netTesting) return;
+  const ids = speedIds();
+  netTesting = true; $("netRun").classList.add("spin"); toast("Testing speed… about 30 seconds");
+  const done = () => { netTesting = false; $("netRun").classList.remove("spin"); };
+  if (DEMO) return setTimeout(() => { S[ids.down].state = String(90 + Math.round(Math.random() * 60)); S[ids.down].last_updated = new Date().toISOString(); renderNet(); done(); }, 1500);
+  send({ type: "call_service", domain: "shell_command", service: "speedtest", service_data: {} })
+    .then(() => loadOokla())
+    .catch(() => ids.down ? call("homeassistant", "update_entity", { entity_id: [ids.down, ids.up, ids.ping].filter(Boolean) }) : toast("Speed test isn't set up yet"))
+    .finally(() => setTimeout(done, 1000));
+}
+setInterval(loadOokla, 5 * 60000);
+
+/* =====================================================================
+   Sheets
+   ===================================================================== */
+let sheetMode = null;
+function openSheet(html, mode){ sheetMode = mode || null; $("sheetBody").innerHTML = html; $("sheet").classList.add("open"); $("scrim").classList.add("open"); }
+function closeSheet(){ sheetMode = null; $("sheet").classList.remove("open"); $("scrim").classList.remove("open"); }
+
+/* Light options (long-press a light) */
+function openLightSheet(i){
+  const l = CONFIG.lights[i], s = S[l.id]; if (!s) return;
+  const effects = (s.attributes.effect_list || []).filter(e => e && e.toLowerCase() !== "off");
+  openSheet(`<h3>${esc(l.name)}</h3><p class="hint" id="lsState"></p>
+    <div class="sect"><span class="lab">Brightness</span><input type="range" class="range" id="lsBri" min="1" max="100"></div>
+    <div class="sect"><span class="lab">Colour</span><div class="swatches">${COLORS.map((p, k) => `<button class="sw" data-k="${k}" style="background:${swBg(p)}">${p.n}</button>`).join("")}</div></div>
+    ${effects.length ? `<div class="sect"><span class="lab">Effects</span><div class="chiplist">${effects.map(e => `<button class="chip" data-e="${esc(e)}">${esc(nice(e))}</button>`).join("")}</div></div>` : ""}
+    <div class="actions"><button class="btn" id="lsToggle"></button></div>`, { type: "light", i });
+  const r = $("lsBri");
+  r.oninput = () => { r.style.setProperty("--p", r.value + "%"); $("lsState").textContent = r.value + "%"; drag.add("lsBri"); };
+  r.onchange = () => { drag.delete("lsBri"); call("light", "turn_on", { entity_id: l.id, brightness_pct: +r.value }); };
+  $("sheetBody").querySelectorAll(".sw").forEach(b => b.onclick = () => { const p = COLORS[b.dataset.k]; call("light", "turn_on", { entity_id: l.id, ...(p.k ? { color_temp_kelvin: p.k } : { rgb_color: p.rgb }) }); });
+  $("sheetBody").querySelectorAll("[data-e]").forEach(b => b.onclick = () => call("light", "turn_on", { entity_id: l.id, effect: b.dataset.e }));
+  $("lsToggle").onclick = () => toggleLight(l.id);
+  refreshLightSheet();
+}
+function refreshLightSheet(){
+  const l = CONFIG.lights[sheetMode.i], s = S[l.id]; if (!s || !$("lsBri")) return;
+  const on = s.state === "on", p = pctOf(s) || 50;
+  if (!drag.has("lsBri")) { $("lsBri").value = p; $("lsBri").style.setProperty("--p", (on ? p : 0) + "%"); $("lsState").textContent = on ? p + "%" : "Off"; }
+  $("lsToggle").innerHTML = icon("power", 18) + (on ? "Turn off" : "Turn on");
+  $("sheetBody").querySelectorAll("[data-e]").forEach(b => b.classList.toggle("sel", s.attributes.effect === b.dataset.e));
+}
+
+/* Scene editor */
+let draft = null, draftIndex = -1;
+function blankScene(){ const lights = {}; CONFIG.lights.forEach(l => lights[l.id] = { m: "skip" }); return { id: "s" + Date.now().toString(36), name: "", icon: "sparkle", lights, ac: { m: "skip" } }; }
+function fromCurrentRoom(){
+  CONFIG.lights.forEach(l => {
+    const s = S[l.id]; if (!s) return;
+    if (s.state !== "on") { draft.lights[l.id] = { m: "off" }; return; }
+    const a = s.attributes, c = a.rgb_color && !a.color_temp_kelvin ? { rgb: a.rgb_color } : a.color_temp_kelvin ? { k: a.color_temp_kelvin } : null;
+    draft.lights[l.id] = { m: "on", b: pctOf(s), c };
+  });
+  const ac = S[CONFIG.climate];
+  if (ac) draft.ac = ac.state === "off" ? { m: "off" } : { m: "set", hvac: ac.state, t: ac.attributes.temperature, fan: ac.attributes.fan_mode || "" };
+}
+function openSceneEditor(i){
+  draftIndex = i; draft = i >= 0 ? JSON.parse(JSON.stringify(SCENES[i])) : blankScene();
+  CONFIG.lights.forEach(l => { if (!draft.lights[l.id]) draft.lights[l.id] = { m: "skip" }; });
+  if (!draft.ac) draft.ac = { m: "skip" };
+  drawEditor();
+}
+const seg = (opts, cur, attr) => `<div class="seg">${opts.map(([v, t]) => `<button class="${v === cur ? "sel" : ""}" ${attr}="${v}">${t}</button>`).join("")}</div>`;
+function sameColor(a, b){ if (!a || !b) return false; if (a.k && b.k) return Math.abs(a.k - b.k) < 150; if (a.rgb && b.rgb) return a.rgb.join() === b.rgb.join(); return false; }
+function drawEditor(){
+  const acS = S[CONFIG.climate], acA = (acS && acS.attributes) || {};
+  const hv = (acA.hvac_modes || ["cool", "dry", "fan_only", "auto"]).filter(m => m !== "off");
+  const fans = acA.fan_modes || [];
+  const lightsHtml = CONFIG.lights.map(l => {
+    const v = draft.lights[l.id];
+    return `<div class="erow"><span class="en">${esc(l.name)}</span>${seg([["skip", "Leave"], ["off", "Off"], ["on", "On"]], v.m, `data-l="${l.id}" data-m`)}</div>
+      ${v.m === "on" ? `<div class="esub"><input type="range" class="range" min="1" max="100" value="${v.b ?? 100}" style="--p:${v.b ?? 100}%" data-lb="${l.id}">
+        <div style="height:10px"></div><div class="swatches">${COLORS.map((p, k) => `<button class="sw${sameColor(v.c, p.k ? { k: p.k } : { rgb: p.rgb }) ? " sel" : ""}" data-lc="${l.id}" data-k="${k}" style="background:${swBg(p)}" aria-label="${p.n}"></button>`).join("")}</div></div>` : ""}`;
+  }).join("");
+  const ac = draft.ac;
+  const acHtml = `<div class="erow"><span class="en">Air conditioner</span>${seg([["skip", "Leave"], ["off", "Off"], ["set", "Set"]], ac.m, "data-am")}</div>
+    ${ac.m === "set" ? `<div class="esub">
+      <div class="erow" style="border:0;padding-top:0"><span class="hint" style="margin:0">Temperature</span><span class="stepper"><button data-at="-1">${icon("minus", 16)}</button><span>${ac.t ?? 24}°</span><button data-at="1">${icon("plus", 16)}</button></span></div>
+      <div class="chiplist" style="margin-bottom:10px">${hv.map(m => `<button class="chip${ac.hvac === m ? " sel" : ""}" data-ah="${m}">${MODE_LABEL[m] || nice(m)}</button>`).join("")}</div>
+      <div class="chiplist" style="margin-bottom:10px"><span class="hint" style="margin:0 6px 0 0;align-self:center">Turn off after</span>${[0, 1, 2, 3, 4, 6, 8].map(h => `<button class="chip${(ac.offAfter || 0) === h ? " sel" : ""}" data-ao="${h}">${h ? h + " h" : "Never"}</button>`).join("")}</div>
+      ${fans.length ? `<div class="chiplist"><button class="chip${!ac.fan ? " sel" : ""}" data-af="">Fan: leave</button>${fans.map(f => `<button class="chip${ac.fan === f ? " sel" : ""}" data-af="${f}">${nice(f)}</button>`).join("")}</div>` : ""}
+    </div>` : ""}`;
+  const html = `<h3>${draftIndex >= 0 ? "Edit scene" : "New scene"}</h3><p class="hint">“Leave” means the scene doesn't touch that device.</p>
+    <div class="sect"><span class="lab">Name</span><input class="txt" id="edName" maxlength="20" placeholder="e.g. Reading" value="${esc(draft.name)}"></div>
+    <div class="sect"><span class="lab">Icon</span><div class="icons">${SCENE_ICONS.map(n => `<button class="${draft.icon === n ? "sel" : ""}" data-ic="${n}">${icon(n, 20)}</button>`).join("")}</div></div>
+    <div class="sect"><span class="lab" style="display:flex;justify-content:space-between;align-items:center">Lights <button class="link" id="edCapture" style="text-transform:none;letter-spacing:0">${icon("sparkle", 16)}Use current room</button></span>${lightsHtml}</div>
+    <div class="sect"><span class="lab">Climate</span>${acHtml}</div>
+    <div class="actions">
+      ${draftIndex >= 0 ? `<button class="btn danger" id="edDel">${icon("trash", 18)}Delete</button>
+        <button class="btn" id="edLeft" aria-label="Move earlier">${icon("left", 18)}</button><button class="btn" id="edRight" aria-label="Move later">${icon("right", 18)}</button>` : ""}
+      <button class="btn" id="edTry">Try it</button>
+      <button class="btn primary" id="edSave">${icon("check", 18, 2.2)}Save</button>
+    </div>`;
+  const keepScroll = $("sheet").scrollTop;
+  openSheet(html, { type: "scene" });
+  $("sheet").scrollTop = keepScroll;
+  const B = $("sheetBody");
+  $("edName").oninput = e => draft.name = e.target.value;
+  B.querySelectorAll("[data-ic]").forEach(b => b.onclick = () => { draft.icon = b.dataset.ic; drawEditor(); });
+  B.querySelectorAll("[data-m]").forEach(b => b.onclick = () => { const v = draft.lights[b.dataset.l]; v.m = b.dataset.m; if (v.m === "on" && v.b == null) { v.b = 80; v.c = { k: 3500 }; } drawEditor(); });
+  B.querySelectorAll("[data-lb]").forEach(r => { r.oninput = () => { r.style.setProperty("--p", r.value + "%"); draft.lights[r.dataset.lb].b = +r.value; }; });
+  B.querySelectorAll("[data-lc]").forEach(b => b.onclick = () => { const p = COLORS[b.dataset.k]; draft.lights[b.dataset.lc].c = p.k ? { k: p.k } : { rgb: p.rgb }; drawEditor(); });
+  B.querySelectorAll("[data-am]").forEach(b => b.onclick = () => { draft.ac.m = b.dataset.am; if (draft.ac.m === "set") { draft.ac.t ??= 24; draft.ac.hvac ??= hv.includes("cool") ? "cool" : hv[0]; draft.ac.fan ??= ""; } drawEditor(); });
+  B.querySelectorAll("[data-at]").forEach(b => b.onclick = () => { const st = acA.target_temp_step || 1; draft.ac.t = Math.max(acA.min_temp ?? 16, Math.min(acA.max_temp ?? 30, (draft.ac.t ?? 24) + st * b.dataset.at)); drawEditor(); });
+  B.querySelectorAll("[data-ah]").forEach(b => b.onclick = () => { draft.ac.hvac = b.dataset.ah; drawEditor(); });
+  B.querySelectorAll("[data-af]").forEach(b => b.onclick = () => { draft.ac.fan = b.dataset.af; drawEditor(); });
+  B.querySelectorAll("[data-ao]").forEach(b => b.onclick = () => { draft.ac.offAfter = +b.dataset.ao; drawEditor(); });
+  $("edCapture").onclick = () => { fromCurrentRoom(); drawEditor(); toast("Copied the room as it is now"); };
+  $("edTry").onclick = () => runSceneDirect(draft);
+  $("edSave").onclick = () => {
+    draft.name = (draft.name || "").trim() || "Scene";
+    if (draftIndex >= 0) SCENES[draftIndex] = draft; else SCENES.push(draft);
+    saveScenes(); closeSheet(); toast("Saved “" + draft.name + "”");
+  };
+  if ($("edDel")) {
+    $("edDel").onclick = () => {
+      if ($("edDel").dataset.sure) { SCENES.splice(draftIndex, 1); saveScenes(); closeSheet(); return; }
+      $("edDel").dataset.sure = "1"; $("edDel").innerHTML = icon("trash", 18) + "Tap again to delete";
+    };
+    const move = d => { const j = draftIndex + d; if (j < 0 || j >= SCENES.length) return;
+      [SCENES[draftIndex], SCENES[j]] = [SCENES[j], SCENES[draftIndex]]; draftIndex = j; saveScenes(); toast("Moved"); };
+    $("edLeft").onclick = () => move(-1); $("edRight").onclick = () => move(1);
+  }
+}
+
+/* Settings */
+function openSettings(){
+  const acc = store.get("accent2", "Oak"), bd = store.get("backdrop2", "Room");
+  openSheet(`<h3>Appearance</h3><p class="hint">Saved on this device. Scenes are saved in Home Assistant and shared by all your devices.</p>
+    <div class="sect"><span class="lab">Accent</span><div class="chiplist">${ACCENTS.map(a => `<button class="chip${a.name === acc ? " sel" : ""}" data-a="${a.name}"><span style="width:10px;height:10px;border-radius:5px;background:${a.c}"></span>${a.name}</button>`).join("")}</div></div>
+    <div class="sect"><span class="lab">Background</span><div class="chiplist">${BACKDROPS.map(b => `<button class="chip${b.name === bd ? " sel" : ""}" data-b="${b.name}">${b.name}</button>`).join("")}</div></div>
+    <div class="sect"><span class="lab">Screen</span><div class="chiplist"><button class="chip" id="dimNow">Dim now</button>${DEMO ? "" : `<button class="chip" id="signOut">Sign out</button>`}</div></div>`);
+  $("sheetBody").querySelectorAll("[data-a]").forEach(b => b.onclick = () => { store.set("accent2", b.dataset.a); applyTheme(); render(); openSettings(); });
+  $("sheetBody").querySelectorAll("[data-b]").forEach(b => b.onclick = () => { store.set("backdrop2", b.dataset.b); applyTheme(); openSettings(); });
+  $("dimNow").onclick = () => { closeSheet(); sleep(); };
+  if ($("signOut")) $("signOut").onclick = () => { store.set("tokens", null); location.reload(); };
+}
+
+/* =====================================================================
+   Tap a widget to enlarge it (the others in its column shrink)
+   ===================================================================== */
+let focus = "";
+const vt = fn => (document.startViewTransition && !matchMedia("(prefers-reduced-motion:reduce)").matches) ? document.startViewTransition(fn) : fn();
+function setFocus(f){
+  if (f === "music") { openNP(); f = ""; } else closeNP();
+  vt(() => {
+    focus = f;
+    $("app").dataset.focus = f;
+    $("music").classList.toggle("slim", f === "wx");
+    $("wx").classList.toggle("big", f === "wx");
+    $("ac").classList.toggle("big", f === "ac"); $("net").classList.toggle("slim", f === "ac");
+    renderWeather();
+  });
+}
+["music", "wx", "ac"].forEach(id => $(id).addEventListener("click", e => {
+  if (e.target.closest("button, .prog, .vol, input, .chips")) return;
+  setFocus(focus === id ? "" : id);
+}));
+
+/* Everything off: tap twice to confirm */
+let offTimer = null;
+function everythingOff(){
+  const b = $("offAll");
+  if (!b.classList.contains("arm")) {
+    b.classList.add("arm"); $("offT").textContent = "Tap again to confirm"; $("offS").textContent = "Turns off lights, AC and pauses music";
+    clearTimeout(offTimer); offTimer = setTimeout(disarmOff, 3500); return;
+  }
+  disarmOff();
+  call("light", "turn_off", { entity_id: CONFIG.lights.map(l => l.id) });
+  const ac = S[CONFIG.climate]; if (ac && ac.state !== "off") acOff();
+  const m = mediaEntity() && S[mediaEntity()]; if (m && m.state === "playing") mcall("media_pause");
+  toast("Everything is off");
+}
+function disarmOff(){ clearTimeout(offTimer); $("offAll").classList.remove("arm"); $("offT").textContent = "Everything off"; $("offS").textContent = "Lights, AC and music"; }
+
+/* =====================================================================
+   Clock, idle screen, toast
+   ===================================================================== */
+let lastTouch = Date.now();
+function tick(){
+  const d = new Date();
+  const time = d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }).replace(/\s?[AP]M/i, "");
+  const date = d.toLocaleDateString([], { weekday: "long", day: "numeric", month: "long" });
+  $("clock").textContent = time; $("date").textContent = date; $("roomClock").textContent = time; $("iClock").textContent = time; $("iDate").textContent = date;
+  const h = d.getHours(), g = h < 5 ? "Good night" : h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : h < 21 ? "Good evening" : "Good night";
+  const greet = CONFIG.name ? `${g}, ${CONFIG.name}` : g;
+  if ($("greet").textContent !== greet) { $("greet").textContent = greet; $("iGreet").textContent = greet; }
+  renderProgress();
+  if (CONFIG.idleSeconds && !editing && !sheetMode && !$("idle").classList.contains("show") && Date.now() - lastTouch > CONFIG.idleSeconds * 1000) sleep();
+}
+function renderIdleSummary(){
+  const on = CONFIG.lights.filter(l => S[l.id] && S[l.id].state === "on").length, ac = S[CONFIG.climate];
+  const m = mediaEntity() && S[mediaEntity()];
+  $("iSum").innerHTML = `<span>${on ? on + " light" + (on > 1 ? "s" : "") + " on" : "Lights off"}</span>${ac ? `<span>${ac.state === "off" ? "AC off" : "AC " + fmtT(ac.attributes.temperature) + "°"}</span>` : ""}${m && m.state === "playing" && m.attributes.media_title ? `<span>♪ ${esc(m.attributes.media_title)}</span>` : ""}`;
+}
+function sleep(){ closeSheet(); closeNP(); if (focus) setFocus(""); document.body.classList.remove("roommode"); roomFit(false); $("idle").classList.add("show"); }
+function wake(){ lastTouch = Date.now(); $("idle").classList.remove("show"); }
+["pointerdown", "keydown"].forEach(ev => document.addEventListener(ev, () => { lastTouch = Date.now(); }, true));
+$("idle").addEventListener("pointerdown", e => { e.stopPropagation(); e.preventDefault(); wake(); });
+let toastTimer;
+function toast(t){ const el = $("toast"); el.textContent = t; el.classList.add("show"); clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove("show"), 3000); }
+
+/* =====================================================================
+   Demo mode (open the file directly, or add ?demo to the address)
+   ===================================================================== */
+const DEMO_LRC = ["[00:52.0]City lights are fading slow", "[00:57.5]Windows down and nowhere to go", "[01:03.0]Every sign just points back home", "[01:08.5]", "[01:12.0]Hold the wheel and let it ride", "[01:17.5]Radio playing through the night", "[01:23.0]Keep it steady, keep it light", "[01:28.5]Late night drive"].join("\n");
+function demoStates(){
+  const Lt = (id, on, b, extra) => ({ entity_id: id, state: on ? "on" : "off", attributes: { brightness: b, effect_list: ["Off", "Aurora", "Rainbow", "Ocean", "Candlelight"], ...extra } });
+  return {
+    [L[0]]: Lt(L[0], false, 0, {}), [L[1]]: Lt(L[1], true, 140, { color_temp_kelvin: 4200 }),
+    [L[2]]: Lt(L[2], true, 90, { rgb_color: [160, 80, 255] }), [L[3]]: Lt(L[3], true, 160, { color_temp_kelvin: 2700 }),
+    [CONFIG.climate]: { entity_id: CONFIG.climate, state: "cool", attributes: { hvac_modes: ["off", "cool", "heat", "auto", "dry", "fan_only"],
+      fan_modes: ["auto", "diffuse", "low", "medium", "high"], fan_mode: "auto", temperature: 24, current_temperature: 23, min_temp: 16, max_temp: 30, target_temp_step: .5 } },
+    "media_player.spotify_fahad": { entity_id: "media_player.spotify_fahad", state: "playing", attributes: { media_title: "Late night drive", media_artist: "Demo artist", media_album_name: "Demo album",
+      media_duration: 214, media_position: 62, media_position_updated_at: new Date().toISOString(), volume_level: .45, shuffle: true, repeat: "off",
+      source: "Fahad's PC", source_list: ["Fahad's PC", "Fahad's iPhone", "Living room speaker"] } },
+    "weather.forecast_home": { entity_id: "weather.forecast_home", state: "partlycloudy", attributes: { temperature: 30, humidity: 74 } },
+    "sensor.fahads_iphone_battery_level": { entity_id: "sensor.fahads_iphone_battery_level", state: "78", attributes: { unit_of_measurement: "%", friendly_name: "Fahad's iPhone Battery Level" } },
+    "sensor.fahads_iphone_battery_state": { entity_id: "sensor.fahads_iphone_battery_state", state: "Charging", attributes: {} },
+    "sensor.fahads_ipad_battery_level": { entity_id: "sensor.fahads_ipad_battery_level", state: "64", attributes: { unit_of_measurement: "%", friendly_name: "Fahad's iPad Battery Level" } },
+    "sensor.fahads_ipad_battery_state": { entity_id: "sensor.fahads_ipad_battery_state", state: "Not Charging", attributes: {} },
+    "sensor.fahads_iphone_watch_battery_level": { entity_id: "sensor.fahads_iphone_watch_battery_level", state: "51", attributes: { unit_of_measurement: "%", friendly_name: "Fahad's iPhone Watch Battery Level" } },
+    "sensor.speedtest_download": { entity_id: "sensor.speedtest_download", state: "118.4", last_updated: new Date(Date.now() - 12 * 60000).toISOString(), attributes: {} },
+    "sensor.speedtest_upload": { entity_id: "sensor.speedtest_upload", state: "96.2", last_updated: new Date().toISOString(), attributes: {} },
+    "sensor.speedtest_ping": { entity_id: "sensor.speedtest_ping", state: "9", last_updated: new Date().toISOString(), attributes: {} },
+  };
+}
+function demoCall(domain, service, d){
+  [].concat(d.entity_id).forEach(id => {
+    const s = S[id]; if (!s) return; const a = s.attributes;
+    if (domain === "light") {
+      if (service === "turn_off") s.state = "off";
+      else { if (service === "turn_on" && s.state === "off" && d.brightness_pct == null && !a.brightness) a.brightness = 180;
+        s.state = "on"; if (d.brightness_pct != null) a.brightness = Math.round(d.brightness_pct * 2.55);
+        if (d.color_temp_kelvin) { a.color_temp_kelvin = d.color_temp_kelvin; delete a.rgb_color; }
+        if (d.rgb_color) { a.rgb_color = d.rgb_color; delete a.color_temp_kelvin; } if (d.effect) a.effect = d.effect; }
+    } else if (domain === "climate") {
+      if (service === "turn_off") s.state = "off"; if (service === "set_hvac_mode") s.state = d.hvac_mode;
+      if (service === "set_temperature") { a.temperature = d.temperature; if (d.hvac_mode) s.state = d.hvac_mode; }
+      if (service === "set_fan_mode") a.fan_mode = d.fan_mode;
+    } else if (domain === "media_player") {
+      if (service === "media_play_pause") { a.media_position = position(s); a.media_position_updated_at = new Date().toISOString(); s.state = s.state === "playing" ? "paused" : "playing"; }
+      if (service === "media_pause") s.state = "paused";
+      if (service === "volume_set") a.volume_level = d.volume_level;
+      if (service === "media_seek") { a.media_position = d.seek_position; a.media_position_updated_at = new Date().toISOString(); }
+      if (service === "select_source") a.source = d.source;
+      if (service === "media_play") s.state = "playing";
+      if (service === "shuffle_set") a.shuffle = d.shuffle;
+      if (service === "repeat_set") a.repeat = d.repeat;
+    }
+  });
+  scheduleRender();
+}
+
+/* =====================================================================
+   Auto-update: reload when a newer version is installed
+   ===================================================================== */
+const VERSION = "2026.11.19.7";
+if (!DEMO) setInterval(async () => {
+  try { const v = await (await fetch("version.json?t=" + Date.now(), { cache: "no-store" })).json();
+    if (v.version && v.version !== VERSION && !sheetMode) location.reload(); } catch {}
+}, 5 * 60000);
+
+/* =====================================================================
+   Start
+   ===================================================================== */
+$("settingsBtn").innerHTML = icon("gear", 21); $("acPower").innerHTML = icon("power", 21);
+$("tUp").innerHTML = icon("plus", 24); $("tDown").innerHTML = icon("minus", 24);
+$("mPrev").innerHTML = icon("prev", 20); $("mNext").innerHTML = icon("next", 20); $("mPlay").innerHTML = icon("play", 22);
+$("mShuf").innerHTML = icon("shuffle", 18); $("mRep").innerHTML = icon("repeat", 18); $("vIco").innerHTML = icon("vol", 18);
+$("sheetClose").innerHTML = icon("close", 18); $("acName").textContent = CONFIG.climateName;
+$("tUp").onclick = () => stepTemp(1); $("tDown").onclick = () => stepTemp(-1); $("acPower").onclick = acPower;
+$("allOff").onclick = () => call("light", "turn_off", { entity_id: CONFIG.lights.map(l => l.id) });
+$("editBtn").onclick = () => vt(() => { editing = !editing; buildScenes(); });
+$("settingsBtn").onclick = openSettings; $("scrim").onclick = closeSheet; $("sheetClose").onclick = closeSheet;
+$("mPrev").onclick = () => { mOpt((st, at) => { at.media_position = 0; at.media_position_updated_at = new Date().toISOString(); }); mcall("media_previous_track"); };
+$("mNext").onclick = () => { mOpt((st, at) => { at.media_position = 0; at.media_position_updated_at = new Date().toISOString(); }); mcall("media_next_track"); };
+$("mPlay").onclick = playPause;
+$("mShuf").onclick = () => { const s = S[mediaEntity()]; if (!s) return; const v = !s.attributes.shuffle; mOpt((st, at) => at.shuffle = v); mcall("shuffle_set", { shuffle: v }); };
+$("mRep").onclick = () => { const s = S[mediaEntity()]; if (!s) return; const order = ["off", "all", "one"]; const v = order[(order.indexOf(s.attributes.repeat || "off") + 1) % 3]; mOpt((st, at) => at.repeat = v); mcall("repeat_set", { repeat: v }); };
+$("devBtn").onclick = openDevices;
+$("roomOpen").innerHTML = icon("expand", 18); $("roomExit").innerHTML = icon("left", 18) + "Controls";
+const roomFit = full => { const sv = $("room").querySelector("svg"); if (sv) sv.setAttribute("preserveAspectRatio", full ? "xMidYMid meet" : "xMidYMid slice"); };
+$("roomOpen").onclick = () => { closeSheet(); vt(() => { roomFit(true); document.body.classList.add("roommode"); }); };
+$("roomExit").onclick = () => vt(() => { roomFit(false); document.body.classList.remove("roommode"); });
+// Now playing controls
+$("npClose").innerHTML = icon("down", 20); $("npClose").onclick = () => setFocus("");
+$("npPrev").innerHTML = icon("prev", 22); $("npNext").innerHTML = icon("next", 22); $("npShuf").innerHTML = icon("shuffle", 20); $("npRep").innerHTML = icon("repeat", 20); $("npVIco").innerHTML = icon("vol", 18);
+$("npPlay").onclick = () => $("mPlay").click(); $("npPrev").onclick = () => $("mPrev").click(); $("npNext").onclick = () => $("mNext").click();
+$("npShuf").onclick = () => $("mShuf").click(); $("npRep").onclick = () => $("mRep").click(); $("npDev").onclick = openDevices;
+bindBar($("npVol"), "npVol", p => { const v = Math.round(p * 100) / 100; mOpt((st, at) => at.volume_level = v); mcall("volume_set", { volume_level: v }); }, $("npVolFill"));
+bindBar($("npProg"), "npProg", p => { const s = S[mediaEntity()]; if (s && s.attributes.media_duration) { const v = Math.round(p * s.attributes.media_duration); mOpt((st, at) => { at.media_position = v; at.media_position_updated_at = new Date().toISOString(); }); mcall("media_seek", { seek_position: v }); LY.cur = -2; } }, $("npProgFill"));
+$("mMini").onclick = playPause;
+$("offIco").innerHTML = icon("power", 20); $("offAll").onclick = everythingOff;
+$("netRun").innerHTML = icon("refresh", 16); $("netRun").onclick = runSpeedtest;
+bindBar($("vol"), "vol", p => { const v = Math.round(p * 100) / 100; mOpt((st, at) => at.volume_level = v); mcall("volume_set", { volume_level: v }); }, $("volFill"));
+bindBar($("prog"), "prog", p => { const s = S[mediaEntity()]; if (s && s.attributes.media_duration) { const v = Math.round(p * s.attributes.media_duration); mOpt((st, at) => { at.media_position = v; at.media_position_updated_at = new Date().toISOString(); }); mcall("media_seek", { seek_position: v }); } }, $("progFill"));
+window.addEventListener("resize", () => buildScenes());
+buildLights();
+document.querySelectorAll(".app .glass").forEach((el, i) => el.style.setProperty("--d", (i * 0.04).toFixed(2) + "s"));
+document.body.classList.add("intro"); setTimeout(() => document.body.classList.remove("intro"), 1600);
+tick(); setInterval(tick, 1000);
+if (DEMO) {
+  S = demoStates();
+  const conds = ["partlycloudy", "partlycloudy", "rainy", "cloudy", "clear-night", "clear-night", "clear-night", "clear-night", "clear-night", "clear-night", "clear-night", "sunny", "sunny", "sunny", "partlycloudy", "partlycloudy"], h0 = new Date(); h0.setMinutes(0, 0, 0);
+  forecast = conds.map((c, i) => ({ datetime: new Date(+h0 + (i + 1) * 3600000).toISOString(), condition: c, temperature: 30 - Math.min(i, 8) * .8 + Math.max(0, i - 10) * 1.2, precipitation_probability: c === "rainy" ? 60 : 5 }));
+  loadScenes(); setConn(true); render();
+}
+else { SCENES = JSON.parse(JSON.stringify(DEFAULT_SCENES)); buildScenes(); connect(); }
+</script>
+</body>
+</html>
