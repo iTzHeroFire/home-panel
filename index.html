@@ -36,7 +36,8 @@ svg{display:block}
 .room{position:fixed;inset:0;z-index:-1;pointer-events:none;background:#0d0c0b}
 .room::after{content:"";position:absolute;inset:0;background:rgba(8,7,6,.42);pointer-events:none;transition:opacity .4s}
 body.roommode .room::after{opacity:0}
-.room svg{width:100%;height:100%;display:block}
+.room svg{width:100%;height:100%;display:block;overflow:hidden}
+#roomMini svg{overflow:hidden}
 .room .lg,.roomcard .lg{transition:opacity 1.2s ease}
 .room .dark,.roomcard .dark{transition:opacity 1.2s ease}
 .tags .tag{opacity:0;transition:opacity .3s;pointer-events:none}
@@ -48,12 +49,12 @@ body.roommode .room .tags .tag{opacity:1}
 .roomcard .tags .tag{transform-box:fill-box}
 .hit{cursor:pointer}
 body:not(.roommode) .room .hit{pointer-events:none}
-body.roommode .room{pointer-events:auto;z-index:5;background:#211e1b}
+body.roommode .room{pointer-events:auto;z-index:25;background:#211e1b}
 body.roommode .app{opacity:0;pointer-events:none}
 .app{transition:opacity .4s}
-.roomexit{position:fixed;top:calc(16px + env(safe-area-inset-top));right:18px;z-index:6;display:none;height:44px;padding:0 16px;border-radius:22px;align-items:center;gap:8px;font-weight:600}
+.roomexit{position:fixed;top:calc(16px + env(safe-area-inset-top));right:18px;z-index:26;display:none;height:44px;padding:0 16px;border-radius:22px;align-items:center;gap:8px;font-weight:600}
 body.roommode .roomexit{display:flex}
-.roomclock{position:fixed;left:24px;top:calc(16px + env(safe-area-inset-top));z-index:6;display:none;font-size:40px;font-weight:200;color:rgba(255,255,255,.85);text-shadow:0 2px 20px rgba(0,0,0,.6)}
+.roomclock{position:fixed;left:24px;top:calc(16px + env(safe-area-inset-top));z-index:26;display:none;font-size:40px;font-weight:200;color:rgba(255,255,255,.85);text-shadow:0 2px 20px rgba(0,0,0,.6)}
 body.roommode .roomclock{display:block}
 .roomcard{position:relative;flex:1 1 auto;min-height:140px;overflow:hidden;padding:0}
 .roomcard #roomMini{position:absolute;inset:0}
@@ -238,11 +239,11 @@ header{grid-area:head;display:flex;align-items:flex-end;justify-content:space-be
 .chips button.sel{background:var(--accent);color:var(--accent-ink);font-weight:600}
 
 /* ---------- Sheet ---------- */
-.scrim{position:fixed;inset:0;background:rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:opacity .25s;z-index:20}
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:opacity .25s;z-index:30}
 .scrim.open{opacity:1;pointer-events:auto}
 .sheet{position:fixed;left:50%;top:50%;width:min(600px,calc(100vw - 28px));max-height:min(86vh,720px);overflow:auto;-webkit-overflow-scrolling:touch;
   transform:translate(-50%,-46%) scale(.97);opacity:0;visibility:hidden;transition:transform .28s cubic-bezier(.2,.8,.2,1),opacity .2s,visibility 0s .28s;
-  z-index:21;padding:22px;background:rgba(26,26,30,.9)}
+  z-index:31;padding:22px;background:rgba(26,26,30,.9)}
 .sheet.open{transform:translate(-50%,-50%);opacity:1;visibility:visible;transition:transform .28s cubic-bezier(.2,.8,.2,1),opacity .2s}
 .sheet h3{margin:0 0 4px;font-size:21px;padding-right:44px}
 .sheet .hint{color:var(--muted);font-size:14px;margin:0 0 6px}
@@ -869,7 +870,11 @@ function roomSVG(p, fit){
   const glow = id => `<linearGradient id="${p}${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".8"/><stop offset=".3" stop-color="#fff" stop-opacity=".28"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>`;
   const pool = id => `<radialGradient id="${p}${id}" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#fff" stop-opacity=".55"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>`;
   const u = id => `url(#${p}${id})`;
-  return `<svg viewBox="0 0 1600 1000" preserveAspectRatio="${fit}">
+    const GLOWS = `  <g class="lg" data-l="0" data-x="${p}g0"><ellipse cx="400" cy="104" rx="460" ry="420" fill="${u("rC1")}"/><rect x="20" y="95" width="760" height="12" rx="6" fill="currentColor" opacity=".35"/><rect x="20" y="98" width="760" height="5" rx="2.5" fill="currentColor"/></g>
+  <g class="lg" data-l="1" data-x="${p}g1"><ellipse cx="1200" cy="104" rx="460" ry="420" fill="${u("rC2")}"/><rect x="820" y="95" width="760" height="12" rx="6" fill="currentColor" opacity=".35"/><rect x="820" y="98" width="760" height="5" rx="2.5" fill="currentColor"/></g>
+  <g class="lg" data-l="2" data-x="${p}g2"><ellipse cx="560" cy="815" rx="420" ry="80" fill="${u("pB")}"/><rect x="262" y="772" width="596" height="14" rx="7" fill="currentColor" opacity=".3"/><rect x="275" y="771" width="570" height="4" rx="2" fill="currentColor"/></g>
+  <g class="lg" data-l="3" data-x="${p}g3"><ellipse cx="1260" cy="398" rx="320" ry="270" fill="${u("rS")}" clip-path="${u("below")}"/><ellipse cx="1270" cy="652" rx="270" ry="34" fill="${u("pS")}"/><rect x="1000" y="397" width="520" height="4" rx="2" fill="currentColor"/></g>`;
+return `<svg viewBox="0 0 1600 1000" preserveAspectRatio="${fit}">
   <defs>
     <linearGradient id="${p}wall" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#dedbd6"/><stop offset="1" stop-color="#cfcbc5"/></linearGradient>
     <linearGradient id="${p}floor" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b9ad98"/><stop offset="1" stop-color="#998d77"/></linearGradient>
@@ -905,7 +910,7 @@ function roomSVG(p, fit){
   <path d="M1080 670 V820 M1460 670 V820 M1050 820 H1110 M1430 820 H1490" stroke="#0e0d0c" stroke-width="12" stroke-linecap="round"/>
   <path d="M1090 600 q20-40 60-20 v120 h-50 z" fill="#77797c"/><path d="M1110 700 v80 M1080 790 h70" stroke="#3a3a38" stroke-width="8" stroke-linecap="round"/>
   <rect class="dark" width="1600" height="1000" fill="#07070c" opacity=".6"/>
-  ${[0, 1, 2, 3].map(k => `<use href="#${p}g${k}" opacity=".7"/>`).join("")}
+  <g opacity=".7">${GLOWS}</g>
   <rect width="1600" height="1000" fill="${u("vig")}"/>
   <g class="spots">${ROOM_SPOTS.map(s => `<rect class="hit" data-spot="${s.key}" x="${s.hit[0]}" y="${s.hit[1]}" width="${s.hit[2]}" height="${s.hit[3]}" fill="transparent"/>`).join("")}</g>
   <g class="tags">${ROOM_SPOTS.map(s => `<g class="tag" data-tag="${s.key}" transform="translate(${s.tag[0]},${s.tag[1]})"><rect x="-95" y="-26" width="190" height="52" rx="26"/><circle class="td" cx="-66" cy="0" r="9"/><text class="tn" x="-48" y="-3"></text><text class="ts" x="-48" y="17"></text></g>`).join("")}</g>
@@ -1697,7 +1702,7 @@ function demoCall(domain, service, d){
 /* =====================================================================
    Auto-update: reload when a newer version is installed
    ===================================================================== */
-const VERSION = "2026.11.19.13";
+const VERSION = "2026.11.19.14";
 if (!DEMO) setInterval(async () => {
   try { const v = await (await fetch("version.json?t=" + Date.now(), { cache: "no-store" })).json();
     if (v.version && v.version !== VERSION && !sheetMode) location.reload(); } catch {}
@@ -1725,8 +1730,8 @@ $("mRep").onclick = () => { const s = S[mediaEntity()]; if (!s) return; const or
 $("devBtn").onclick = openDevices;
 $("roomOpen").innerHTML = icon("expand", 18); $("roomExit").innerHTML = icon("left", 18) + "Controls";
 const roomFit = full => { const sv = $("room").querySelector("svg"); if (sv) sv.setAttribute("preserveAspectRatio", full ? "xMidYMid meet" : "xMidYMid slice"); };
-$("roomOpen").onclick = () => { closeSheet(); vt(() => { roomFit(true); document.body.classList.add("roommode"); }); };
-$("roomExit").onclick = () => vt(() => { roomFit(false); document.body.classList.remove("roommode"); });
+$("roomOpen").onclick = e => { e.stopPropagation(); closeSheet(); roomFit(true); document.body.classList.add("roommode"); };
+$("roomExit").onclick = () => { roomFit(false); document.body.classList.remove("roommode"); };
 $("mMini").onclick = playPause;
 $("offIco").innerHTML = icon("power", 20); $("offAll").onclick = everythingOff;
 $("netRun").innerHTML = icon("refresh", 16); $("netRun").onclick = runSpeedtest;
