@@ -342,7 +342,11 @@ button:active{transform:scale(.94);transition-duration:.08s}
 .acinfo svg{flex:1;height:26px;min-width:0}
 .acinfo .tr{stroke:var(--accent);stroke-width:1.6;fill:none;stroke-linecap:round;stroke-linejoin:round}
 .acinfo .ta{fill:color-mix(in srgb,var(--accent) 16%,transparent);stroke:none}
-.acinfo .ao{white-space:nowrap}
+.acinfo .ao{white-space:nowrap;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;padding:5px 10px;border-radius:12px;background:rgba(255,255,255,.06)}
+.acinfo .ao i{width:26px;height:15px;border-radius:8px;background:rgba(255,255,255,.18);position:relative;transition:background .3s}
+.acinfo .ao i::after{content:"";position:absolute;top:2px;left:2px;width:11px;height:11px;border-radius:6px;background:#fff;transition:transform .3s var(--spring,ease)}
+.acinfo .ao.on i{background:var(--accent)}
+.acinfo .ao.on i::after{transform:translateX(11px)}
 .bat{cursor:pointer}
 .batlist{display:flex;flex-direction:column;gap:8px}
 .batrow{display:flex;align-items:center;gap:14px;padding:12px 14px;border-radius:16px;background:rgba(255,255,255,.06)}
@@ -423,7 +427,7 @@ body.isnight .night{opacity:1}
     </div>
     <button class="step" id="tUp" aria-label="Raise"></button></div>
     <div class="acrow"><div class="lab">Mode</div><div class="chips" id="modes"></div></div>
-    <div class="acinfo" id="acInfo"><svg id="trend" viewBox="0 0 200 26" preserveAspectRatio="none"></svg><span class="ao" id="acAuto"></span></div>
+    <div class="acinfo" id="acInfo"><svg id="trend" viewBox="0 0 200 26" preserveAspectRatio="none"></svg><button class="ao" id="acAuto" aria-label="Turn the 7:30 AM auto-off on or off"></button></div>
     <div class="acrow" id="fanRow"><div class="lab">Fan</div><div class="chips" id="fans"></div></div>
     <div class="acrow" id="swingRow"><div class="lab">Swing</div><div class="chips" id="swings"></div></div>
   </section>
@@ -760,7 +764,7 @@ const AUTO_OFF = "07:30";
 async function ensureAutoOff(force){
   if (DEMO) return;
   const exists = Object.keys(S).some(k => k.startsWith("automation.") && S[k].attributes.id === "panel_ac_off_0730");
-  if (exists && !force) return;
+  if (exists) return;   // already there — leave it (and whether it's enabled) alone
   try {
     await api("POST", "/api/config/automation/config/panel_ac_off_0730", {
       alias: "Panel · AC off at 7:30 AM", description: "Created by the wall panel",
@@ -769,6 +773,23 @@ async function ensureAutoOff(force){
       actions: [{ action: "climate.set_hvac_mode", target: { entity_id: CONFIG.climate }, data: { hvac_mode: "off" } }],
       mode: "single" });
   } catch (e) { console.warn("auto-off", e); }
+}
+/* The auto-off can be switched on/off from the AC card (it enables/disables the automation). */
+function autoOffEntity(){ return Object.keys(S).find(k => k.startsWith("automation.") && S[k].attributes.id === "panel_ac_off_0730"); }
+let demoAutoOff = true;
+function renderAutoOff(){
+  const id = autoOffEntity(), on = DEMO ? demoAutoOff : !!id && S[id].state === "on";
+  const b = $("acAuto"); if (!b) return;
+  b.classList.toggle("on", on);
+  b.innerHTML = `<i></i>${on ? "Off at 7:30 AM" : "Auto-off disabled"}`;
+}
+function toggleAutoOff(){
+  if (DEMO) { demoAutoOff = !demoAutoOff; renderAutoOff(); return; }
+  const id = autoOffEntity(); if (!id) return toast("Auto-off is still being set up — try again in a moment");
+  const on = S[id].state === "on";
+  S[id].state = on ? "off" : "on"; renderAutoOff();                       // update instantly
+  call("automation", on ? "turn_off" : "turn_on", { entity_id: id });
+  toast(on ? "The AC won't turn off at 7:30 AM" : "The AC will turn off at 7:30 AM");
 }
 let syncedOnce = false;
 async function syncScripts(force){
@@ -1112,7 +1133,7 @@ function renderAC(){
   drawArc(t == null ? 0 : (t - minT) / (maxT - minT), minT, maxT);
   const room = a.current_temperature != null ? `Room ${Math.round(a.current_temperature)}°` : "";
   $("tSub").textContent = [room, off ? "Off" : MODE_LABEL[s.state] || nice(s.state)].filter(Boolean).join(" · ");
-  $("acAuto").textContent = off ? "Auto-off 7:30 AM" : "Turns off 7:30 AM";
+  renderAutoOff();
   renderChips($("modes"), (a.hvac_modes || []).filter(m => m !== "off"), s.state, m => call("climate", "set_hvac_mode", { entity_id: CONFIG.climate, hvac_mode: m }), MODE_LABEL);
   $("fanRow").hidden = !a.fan_modes;
   if (a.fan_modes) renderChips($("fans"), a.fan_modes, a.fan_mode, m => call("climate", "set_fan_mode", { entity_id: CONFIG.climate, fan_mode: m }));
@@ -1676,7 +1697,7 @@ function demoCall(domain, service, d){
 /* =====================================================================
    Auto-update: reload when a newer version is installed
    ===================================================================== */
-const VERSION = "2026.11.19.12";
+const VERSION = "2026.11.19.13";
 if (!DEMO) setInterval(async () => {
   try { const v = await (await fetch("version.json?t=" + Date.now(), { cache: "no-store" })).json();
     if (v.version && v.version !== VERSION && !sheetMode) location.reload(); } catch {}
@@ -1692,6 +1713,7 @@ $("mShuf").innerHTML = icon("shuffle", 18); $("mRep").innerHTML = icon("repeat",
 $("sheetClose").innerHTML = icon("close", 18); $("acName").textContent = CONFIG.climateName;
 $("tUp").onclick = () => stepTemp(1); $("tDown").onclick = () => stepTemp(-1); $("acPower").onclick = acPower;
 $("allLights").onclick = () => openLightSheet(-1);
+$("acAuto").onclick = e => { e.stopPropagation(); toggleAutoOff(); };
 $("allOff").onclick = () => call("light", "turn_off", { entity_id: CONFIG.lights.map(l => l.id) });
 $("editBtn").onclick = () => vt(() => { editing = !editing; buildScenes(); });
 $("settingsBtn").onclick = openSettings; $("scrim").onclick = closeSheet; $("sheetClose").onclick = closeSheet;
