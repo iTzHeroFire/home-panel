@@ -684,8 +684,10 @@ async function loadScenes(){
   let changed = false;
   SCENES.forEach(sc => { if (sc.id === "sleep" && sc.ac && sc.ac.m === "set" && sc.ac.offAfter === undefined) { sc.ac.offAfter = 3; changed = true; } });
   buildScenes();
-  if (changed) saveScenes(); else syncScripts(store.get("scriptsVer", 0) !== 6);
-  store.set("scriptsVer", 6);
+  // Rebuild the scene scripts after an update, or when the AC changed (e.g. a new AC integration).
+  const stale = store.get("scriptsVer", 0) !== 9 || store.get("scriptsClimate", "") !== CONFIG.climate;
+  if (changed) saveScenes(); else syncScripts(stale);
+  store.set("scriptsVer", 9); store.set("scriptsClimate", CONFIG.climate);
 }
 async function saveScenes(){
   buildScenes();
@@ -1531,7 +1533,7 @@ function demoCall(domain, service, d){
 /* =====================================================================
    Auto-update: reload when a newer version is installed
    ===================================================================== */
-const VERSION = "2026.11.19.9";
+const VERSION = "2026.11.19.10";
 if (!DEMO) setInterval(async () => {
   try { const v = await (await fetch("version.json?t=" + Date.now(), { cache: "no-store" })).json();
     if (v.version && v.version !== VERSION && !sheetMode) location.reload(); } catch {}
