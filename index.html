@@ -370,6 +370,80 @@ body.isnight .night{opacity:1}
   .hleft{flex-direction:column;align-items:flex-start;gap:6px}
   .greet{font-size:18px}
 }
+/* ---------- Phone: one screen, no scrolling. Swipe left for room, weather and speed. ---------- */
+@media (max-width:600px){
+  html,body{overflow:hidden;height:100%}
+  .app{position:fixed;inset:0;height:100dvh;min-height:0;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;
+    grid-template-columns:100vw 100vw;column-gap:0;row-gap:9px;
+    grid-template-rows:auto auto auto auto minmax(0,1fr) auto auto auto;
+    grid-template-areas:"head room" "shead room" "scenes room" "lhead room" "lights wx" "ac net" "off lyp" "music lyp";
+    padding:calc(10px + env(safe-area-inset-top)) 0 calc(10px + env(safe-area-inset-bottom))}
+  .app::-webkit-scrollbar{display:none}
+  .side,.main,.rcol{display:contents}
+  .app>*,.side>*,.main>*,.rcol>*{margin-inline:14px;min-width:0}
+  header{grid-area:head;scroll-snap-align:start;padding:0 2px}
+  #sHead{grid-area:shead;min-height:22px}#lHead{grid-area:lhead;min-height:22px}
+  .scenes{grid-area:scenes;gap:8px;grid-auto-rows:auto}
+  .roomcard{grid-area:room;min-height:0;scroll-snap-align:start}
+  /* page-2 cards fill their area without stretching page-1 rows */
+  .roomcard,.wx,.net,.lyp{contain:size;min-height:0}
+  .wx{overflow:hidden}
+  .lights{grid-area:lights;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr));gap:9px;min-height:0}
+  .wx{grid-area:wx}.net{grid-area:net}.offall{grid-area:off}.music{grid-area:music}.lyp{grid-area:lyp}
+  .ac{grid-area:ac}
+  /* header */
+  .clock{font-size:34px;letter-spacing:-1px}.greet{font-size:15px}.date{font-size:12px}
+  .hleft{flex-direction:row;align-items:center;gap:12px}
+  #bats,.hright .pill:not(.bat){display:none!important}
+  .hright .iconbtn{width:38px;height:38px}
+  /* scenes */
+  .scene{height:72px;padding:8px 4px;border-radius:18px;gap:5px}
+  .scene .sic{width:32px;height:32px}.scene .sic svg{width:18px;height:18px}
+  .scene .sn{font-size:12px}
+  /* lights */
+  .light{padding:8px 10px 16px;min-height:0;border-radius:20px}
+  .wx{padding:12px 14px;gap:6px}.wxt{font-size:34px}.wxc{font-size:12px}
+  .hr{padding:6px 0;gap:3px}
+  .light .art2{height:auto;flex:1;min-height:30px;margin-bottom:4px}
+  .light .ln{font-size:14px}.light .ls{font-size:12px}
+  /* AC: one compact row + modes */
+  .ac{display:grid;grid-template-columns:auto 1fr;gap:8px 10px;padding:10px 12px;min-height:0;border-radius:22px}
+  .achead{flex-direction:column;align-items:flex-start;gap:6px;justify-content:center}
+  .achead .lab{font-size:10px}
+  .power{width:40px;height:40px}
+  .dialrow{margin:0;gap:4px;justify-content:flex-end}
+  .dialwrap{height:auto;max-width:none;flex:none}
+  .dialwrap svg.arc{display:none}
+  .dialc{position:static;padding:0 8px}
+  .dialc .big,.ac:not(.big) .dialc .big{font-size:36px;letter-spacing:-1.5px}
+  .dialc .big sup{font-size:14px;top:4px}
+  .dialc .sub{font-size:11px;margin-top:0}
+  .step{width:40px;height:40px}
+  .ac .acrow{grid-column:1/-1;margin-top:0}
+  .ac .acrow .lab{display:none}
+  .ac .chips{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+  .ac .chips button{flex:none;height:30px}
+  .ac #fanRow,.ac #swingRow,.ac .acinfo{display:none}
+  /* everything off + music bar */
+  .offall{padding:8px 12px;border-radius:20px}.offall .oic{width:36px;height:36px}.offall .os{display:none}
+  .music{padding:8px 10px;border-radius:20px;flex:none}
+  .music .art{width:44px;height:44px;border-radius:12px}
+  .music .mini{display:grid}
+  .music:not(.big) .pwrap,.music:not(.big) .mctl,.music:not(.big) .vrow,.music:not(.big) .devbtn{display:none}
+  /* tapping Spotify or the AC on the phone opens it as a sheet over the bottom of the screen */
+  .music.big,.ac.big{position:fixed;left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom));z-index:28;margin:0;
+    background:rgba(26,26,30,.94);box-shadow:0 -10px 40px rgba(0,0,0,.6)}
+  .music.big{display:flex;flex-direction:column;gap:12px;padding:16px}
+  .music.big .mtop{flex-direction:row;align-items:center}
+  .music.big .art{width:64px;height:64px;flex:none;aspect-ratio:auto}
+  .music.big .mini{display:none}
+  .ac.big{display:flex;flex-direction:column;padding:16px}
+  .ac.big .dialwrap svg.arc{display:block;max-height:180px}
+  .ac.big .dialc{position:absolute;padding:0}
+  .ac.big .dialwrap{flex:1;height:200px;max-width:220px}
+  .ac.big #fanRow{display:block}.ac.big .acrow .lab{display:block}
+  .app[data-focus] .scenes,.app[data-focus] .lights{filter:brightness(.6)}
+}
 </style>
 </head>
 <body>
@@ -411,10 +485,10 @@ body.isnight .night{opacity:1}
   </header>
 
   <main class="main">
-    <div class="sechead"><span class="lab">Scenes</span><button class="link" id="editBtn">Edit</button></div>
+    <div class="sechead" id="sHead"><span class="lab">Scenes</span><button class="link" id="editBtn">Edit</button></div>
     <section class="scenes" id="scenes"></section>
     <section class="roomcard glass" id="roomCard"><div id="roomMini"></div><button class="rcx" id="roomOpen" aria-label="Full-screen room"></button></section>
-    <div class="sechead"><span class="lab">Lights</span><span style="display:flex;gap:4px"><button class="link" id="allLights">All lights</button><button class="link" id="allOff">All off</button></span></div>
+    <div class="sechead" id="lHead"><span class="lab">Lights</span><span style="display:flex;gap:4px"><button class="link" id="allLights">All lights</button><button class="link" id="allOff">All off</button></span></div>
     <section class="lights" id="lights"></section>
   </main>
 
@@ -729,9 +803,9 @@ async function loadScenes(){
   SCENES.forEach(sc => { if (sc.ac && "offAfter" in sc.ac) { delete sc.ac.offAfter; changed = true; } });   // timer feature removed
   buildScenes();
   // Rebuild the scene scripts after an update, or when the AC changed (e.g. a new AC integration).
-  const stale = store.get("scriptsVer", 0) !== 12 || store.get("scriptsClimate", "") !== CONFIG.climate;
+  const stale = store.get("scriptsVer", 0) !== 17 || store.get("scriptsClimate", "") !== CONFIG.climate;
   if (changed) saveScenes(); else syncScripts(stale);
-  store.set("scriptsVer", 12); store.set("scriptsClimate", CONFIG.climate);
+  store.set("scriptsVer", 17); store.set("scriptsClimate", CONFIG.climate);
 }
 async function saveScenes(){
   buildScenes();
@@ -772,6 +846,16 @@ async function api(method, path, body){
   return r;
 }
 const AUTO_OFF = "07:30";
+async function ensureEverythingOff(){
+  if (DEMO) return;
+  const media = mediaEntity();
+  const seq = [
+    { action: "light.turn_off", target: { entity_id: CONFIG.lights.map(l => l.id) } },
+    { action: "climate.set_hvac_mode", target: { entity_id: CONFIG.climate }, data: { hvac_mode: "off" }, continue_on_error: true }];
+  if (media) seq.push({ action: "media_player.media_pause", target: { entity_id: media }, continue_on_error: true });
+  try { await api("POST", "/api/config/script/config/panel_everything_off", { alias: "Everything off", icon: "mdi:power", mode: "single", sequence: seq }); }
+  catch (e) { console.warn("everything-off script", e); }
+}
 async function ensureAutoOff(force){
   if (DEMO) return;
   const exists = Object.keys(S).some(k => k.startsWith("automation.") && S[k].attributes.id === "panel_ac_off_0730");
@@ -805,7 +889,7 @@ function toggleAutoOff(){
 let syncedOnce = false;
 async function syncScripts(force){
   if (DEMO || (syncedOnce && !force)) return; syncedOnce = true;
-  ensureAutoOff(force);
+  ensureAutoOff(force); ensureEverythingOff();
   try {
     const keep = new Set(SCENES.map(scriptKey));
     for (const sc of SCENES) {
@@ -985,13 +1069,14 @@ function buildLights(){
     el.innerHTML = `<div class="art2">${illustration(l.art, i)}</div><div class="ln">${esc(l.name)}</div><div class="ls">Off</div><div class="bar"><i></i></div>`;
     // tap = on/off · swipe left/right = brightness · long-press = colour & effects
     let timer = null, long = false, sx = 0, sy = 0, sliding = false, startPct = 0, pct = 0;
-    el.addEventListener("pointerdown", e => { long = false; sliding = false; sx = e.clientX; sy = e.clientY; el.classList.add("press");
+    let touchy = false;
+    el.addEventListener("pointerdown", e => { long = false; sliding = false; touchy = e.pointerType !== "mouse"; sx = e.clientX; sy = e.clientY; el.classList.add("press");
       el.setPointerCapture(e.pointerId); startPct = pctOf(S[l.id]);
       timer = setTimeout(() => { long = true; timer = null; el.classList.remove("press"); openLightSheet(i); }, 450); });
     el.addEventListener("pointermove", e => {
       const dx = e.clientX - sx, dy = e.clientY - sy;
-      if (!sliding && !long && Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy) * 1.2) { clearTimeout(timer); timer = null; sliding = true; el.classList.remove("press"); el.classList.add("dragging"); drag.add(l.id); }
-      else if (!sliding && timer && Math.abs(dy) > 10) { clearTimeout(timer); timer = null; el.classList.remove("press"); }
+      if (touchy && !sliding && !long && Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy) * 1.2) { clearTimeout(timer); timer = null; sliding = true; el.classList.remove("press"); el.classList.add("dragging"); drag.add(l.id); }
+      else if (!sliding && timer && (Math.abs(dy) > 10 || (!touchy && Math.hypot(dx, dy) > 10))) { clearTimeout(timer); timer = null; el.classList.remove("press"); }
       if (sliding) {
         pct = Math.max(1, Math.min(100, Math.round(startPct + dx / el.clientWidth * 130)));
         el.querySelector(".bar i").style.width = pct + "%"; el.querySelector(".ls").innerHTML = `<b>${pct}%</b>`;
@@ -1056,7 +1141,8 @@ function buildScenes(){
     wrap.appendChild(add);
   }
   const n = wrap.children.length;
-  const narrow = window.matchMedia("(max-width:900px),(orientation:portrait)").matches, cols = narrow ? 2 : Math.min(Math.max(n, 1), 5);
+  const phone = window.matchMedia("(max-width:600px)").matches, narrow = !phone && window.matchMedia("(max-width:900px),(orientation:portrait)").matches;
+  const cols = phone ? Math.min(Math.max(n, 1), 4) : narrow ? 2 : Math.min(Math.max(n, 1), 5);
   wrap.style.gridTemplateColumns = `repeat(${cols},minmax(0,1fr))`;
   wrap.style.gridTemplateRows = "";
   renderSceneActive();
@@ -1603,6 +1689,10 @@ function setFocus(f){
     renderWeather(); LY.cur = -1; scheduleLyrics();
   });
 }
+document.addEventListener("click", e => {
+  if (!window.matchMedia("(max-width:600px)").matches || !focus) return;
+  if (!e.target.closest("#music, #ac, .sheet, .scrim")) setFocus("");
+});
 ["music", "wx", "ac"].forEach(id => $(id).addEventListener("click", e => {
   if (e.target.closest("button, .prog, .vol, input, .chips")) return;
   setFocus(focus === id ? "" : id);
@@ -1720,7 +1810,7 @@ function demoCall(domain, service, d){
 /* =====================================================================
    Auto-update: reload when a newer version is installed
    ===================================================================== */
-const VERSION = "2026.11.19.16";
+const VERSION = "2026.11.19.17";
 if (!DEMO) setInterval(async () => {
   try { const v = await (await fetch("version.json?t=" + Date.now(), { cache: "no-store" })).json();
     if (v.version && v.version !== VERSION && !sheetMode) location.reload(); } catch {}
