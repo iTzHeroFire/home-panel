@@ -808,9 +808,9 @@ async function loadScenes(){
   SCENES.forEach(sc => { if (sc.ac && "offAfter" in sc.ac) { delete sc.ac.offAfter; changed = true; } });   // timer feature removed
   buildScenes();
   // Rebuild the scene scripts after an update, or when the AC changed (e.g. a new AC integration).
-  const stale = store.get("scriptsVer", 0) !== 18 || store.get("scriptsClimate", "") !== CONFIG.climate;
+  const stale = store.get("scriptsVer", 0) !== 19 || store.get("scriptsClimate", "") !== CONFIG.climate;
   if (changed) saveScenes(); else syncScripts(stale);
-  store.set("scriptsVer", 18); store.set("scriptsClimate", CONFIG.climate);
+  store.set("scriptsVer", 19); store.set("scriptsClimate", CONFIG.climate);
 }
 async function saveScenes(){
   buildScenes();
@@ -825,61 +825,82 @@ async function saveScenes(){
 const MDI = { book: "mdi:book-open-variant", sun: "mdi:white-balance-sunny", bulb: "mdi:lightbulb-on", moon: "mdi:weather-night", sofa: "mdi:sofa",
   target: "mdi:target", film: "mdi:movie-open", coffee: "mdi:coffee", game: "mdi:controller", bed: "mdi:bed", power: "mdi:power", music: "mdi:music" };
 const scriptKey = sc => "panel_" + String(sc.id).toLowerCase().replace(/[^a-z0-9_]/g, "_");
-function sceneSequence(sc){
-  const seq = [], lights = sc.lights || {};
-  const offs = Object.keys(lights).filter(id => lights[id].m === "off");
-  if (offs.length) seq.push({ action: "light.turn_off", target: { entity_id: offs } });
-  Object.keys(lights).filter(id => lights[id].m === "on").forEach(id => {
-    const v = lights[id], data = { brightness_pct: v.b ?? 100 };
-    if (v.c && v.c.k) data.color_temp_kelvin = v.c.k; if (v.c && v.c.rgb) data.rgb_color = v.c.rgb;
-    seq.push({ action: "light.turn_on", target: { entity_id: id }, data });
-  });
-  const ac = sc.ac || {};
-  const T = { entity_id: CONFIG.climate };
-  if (ac.m === "off") seq.push({ action: "climate.set_hvac_mode", target: T, data: { hvac_mode: "off" } });
-  if (ac.m === "set") {
-    seq.push({ action: "climate.set_hvac_mode", target: T, data: { hvac_mode: ac.hvac || "cool" } }, { delay: { seconds: 2 } });
-    if (ac.t != null) seq.push({ action: "climate.set_temperature", target: T, data: { temperature: ac.t } });
-    if (ac.fan) seq.push({ delay: { seconds: 2 } }, { action: "climate.set_fan_mode", target: T, data: { fan_mode: ac.fan } });
-  }
-  return seq.concat(sceneCheck(sc));
+function lightData(v){
+  const data = { brightness_pct: v.b ?? 100 };
+  if (v.c && v.c.k) data.color_temp_kelvin = v.c.k; if (v.c && v.c.rgb) data.rgb_color = v.c.rgb;
+  return data;
 }
-/* 10 s after a scene runs, Home Assistant checks every light and the AC.
-   Anything that didn't respond gets the command again (lights up to 3x, AC up to 2x).
-   If something still isn't right, the panel shows which one. */
+function sceneSequence(sc){
+  // Every light gets its own command, all at the same time, and one light failing never stops the others.
+  const lights = sc.lights || {}, cmds = [];
+  Object.keys(lights).forEach(id => {
+    const v = lights[id];
+    if (v.m === "off") cmds.push({ action: "light.turn_off", target: { entity_id: id }, continue_on_error: true });
+    if (v.m === "on") cmds.push({ action: "light.turn_on", target: { entity_id: id }, data: lightData(v), continue_on_error: true });
+  });
+  const ac = sc.ac || {}, T = { entity_id: CONFIG.climate }, acSeq = [];
+  if (ac.m === "off") acSeq.push({ action: "climate.set_hvac_mode", target: T, data: { hvac_mode: "off" }, continue_on_error: true });
+  if (ac.m === "set") {
+    acSeq.push({ action: "climate.set_hvac_mode", target: T, data: { hvac_mode: ac.hvac || "cool" }, continue_on_error: true }, { delay: { seconds: 2 } });
+    if (ac.t != null) acSeq.push({ action: "climate.set_temperature", target: T, data: { temperature: ac.t }, continue_on_error: true });
+    if (ac.fan) acSeq.push({ delay: { seconds: 2 } }, { action: "climate.set_fan_mode", target: T, data: { fan_mode: ac.fan }, continue_on_error: true });
+  }
+  if (acSeq.length) cmds.push({ sequence: acSeq });
+  return (cmds.length ? [{ parallel: cmds }] : []).concat(sceneCheck(sc));
+}
+/* 10 s after a scene runs, Home Assistant re-reads every light and the AC (no stale states)
+   and fixes anything that isn't right:
+   - lights: up to 5 more tries over ~1.5 min; a light that has dropped off ("unavailable")
+     gets its Tapo connection restarted before the next try
+   - AC: up to 3 more tries
+   Anything still wrong shows on the panel and as a notification in the Home Assistant app. */
 function sceneCheck(sc){
   const lights = sc.lights || {}, checks = [], fails = [], ac = sc.ac || {}, A = CONFIG.climate;
   const nameOf = id => (CONFIG.lights.find(l => l.id === id) || {}).name || id;
-  const loop = (bad, tries, wait, steps) => ({ repeat: {
+  const refresh = id => [{ action: "homeassistant.update_entity", target: { entity_id: id }, continue_on_error: true }, { delay: { seconds: 2 } }];
+  const loop = (id, bad, tries, wait, steps) => ({ repeat: {
     while: [{ condition: "template", value_template: `{{ repeat.index <= ${tries} and (${bad}) }}` }],
-    sequence: steps.concat({ delay: { seconds: wait } }) } });
-  Object.keys(lights).forEach(id => {
-    const v = lights[id]; let bad, steps;
-    if (v.m === "off") { bad = `is_state('${id}','on')`; steps = [{ action: "light.turn_off", target: { entity_id: id } }]; }
-    else if (v.m === "on") {
-      const b = Math.round(255 * (v.b ?? 100) / 100), data = { brightness_pct: v.b ?? 100 };
+    sequence: steps.concat({ delay: { seconds: wait } }, refresh(id)) } });
+  const ids = Object.keys(lights).filter(id => lights[id].m === "on" || lights[id].m === "off");
+  ids.forEach(id => {
+    const v = lights[id]; let bad, cmd;
+    if (v.m === "off") { bad = `not is_state('${id}','off')`; cmd = { action: "light.turn_off", target: { entity_id: id }, continue_on_error: true }; }
+    else {
+      const b = Math.round(255 * (v.b ?? 100) / 100);
       bad = `not is_state('${id}','on') or ((state_attr('${id}','brightness')|int(0)) - ${b})|abs > 10`;
-      if (v.c && v.c.k) { data.color_temp_kelvin = v.c.k; bad += ` or ((state_attr('${id}','color_temp_kelvin')|int(0)) - ${v.c.k})|abs > 300`; }
-      if (v.c && v.c.rgb) { data.rgb_color = v.c.rgb; bad += ` or state_attr('${id}','color_mode') == 'color_temp'`; }
-      steps = [{ action: "light.turn_on", target: { entity_id: id }, data }];
-    } else return;
-    checks.push(loop(bad, 3, 5, steps)); fails.push([nameOf(id), bad]);
+      if (v.c && v.c.k) bad += ` or ((state_attr('${id}','color_temp_kelvin')|int(0)) - ${v.c.k})|abs > 300`;
+      if (v.c && v.c.rgb) bad += ` or state_attr('${id}','color_mode') == 'color_temp'`;
+      cmd = { action: "light.turn_on", target: { entity_id: id }, data: lightData(v), continue_on_error: true };
+    }
+    const revive = { if: [{ condition: "state", entity_id: id, state: "unavailable" }],
+      then: [{ action: "homeassistant.reload_config_entry", target: { entity_id: id }, continue_on_error: true },
+             { wait_template: `{{ not is_state('${id}','unavailable') }}`, timeout: 20 }] };
+    checks.push(loop(id, bad, 5, 6, [revive, cmd])); fails.push([nameOf(id), bad]);
   });
+  const acIds = [];
   if (ac.m === "off") {
     const bad = `not is_state('${A}','off')`;
-    checks.push(loop(bad, 2, 10, [{ action: "climate.set_hvac_mode", target: { entity_id: A }, data: { hvac_mode: "off" } }])); fails.push(["AC", bad]);
+    checks.push(loop(A, bad, 3, 10, [{ action: "climate.set_hvac_mode", target: { entity_id: A }, data: { hvac_mode: "off" }, continue_on_error: true }])); fails.push(["AC", bad]);
+    acIds.push(A);
   }
   if (ac.m === "set") {
     const mode = ac.hvac || "cool";
     let bad = `not is_state('${A}','${mode}')`; if (ac.t != null) bad += ` or (state_attr('${A}','temperature')|float(0)) != ${ac.t}`;
-    const steps = [{ action: "climate.set_hvac_mode", target: { entity_id: A }, data: { hvac_mode: mode } }];
-    if (ac.t != null) steps.push({ delay: { seconds: 2 } }, { action: "climate.set_temperature", target: { entity_id: A }, data: { temperature: ac.t } });
-    checks.push(loop(bad, 2, 10, steps)); fails.push(["AC", bad]);
+    const steps = [{ action: "climate.set_hvac_mode", target: { entity_id: A }, data: { hvac_mode: mode }, continue_on_error: true }];
+    if (ac.t != null) steps.push({ delay: { seconds: 2 } }, { action: "climate.set_temperature", target: { entity_id: A }, data: { temperature: ac.t }, continue_on_error: true });
+    checks.push(loop(A, bad, 3, 10, steps)); fails.push(["AC", bad]);
+    acIds.push(A);
   }
   if (!checks.length) return [];
   const report = "{% set f = namespace(l=[]) %}" + fails.map(([n, bad]) => `{% if ${bad} %}{% set f.l = f.l + ['${n}'] %}{% endif %}`).join("") + "{{ f.l | join(', ') }}";
-  return [{ delay: { seconds: 10 } }, { parallel: checks },
-    { event: "panel_scene_check", event_data: { scene: sc.name, failed: report } }];
+  return [{ delay: { seconds: 10 } },
+    { action: "homeassistant.update_entity", target: { entity_id: ids.concat(acIds) }, continue_on_error: true }, { delay: { seconds: 2 } },
+    { parallel: checks },
+    { variables: { failed: report } },
+    { event: "panel_scene_check", event_data: { scene: sc.name, failed: "{{ failed }}" } },
+    { if: [{ condition: "template", value_template: "{{ failed | length > 0 }}" }],
+      then: [{ action: "persistent_notification.create", continue_on_error: true,
+        data: { notification_id: "panel_scene_check", title: `${sc.name} scene`, message: "{{ failed }} still isn't right after retrying. Check that it's powered and on Wi-Fi." } }] }];
 }
 async function api(method, path, body){
   const token = await getToken();
@@ -1852,7 +1873,7 @@ function demoCall(domain, service, d){
 /* =====================================================================
    Auto-update: reload when a newer version is installed
    ===================================================================== */
-const VERSION = "2026.11.21.1";
+const VERSION = "2026.11.22.1";
 if (!DEMO) setInterval(async () => {
   try { const v = await (await fetch("version.json?t=" + Date.now(), { cache: "no-store" })).json();
     if (v.version && v.version !== VERSION && !sheetMode) location.reload(); } catch {}
