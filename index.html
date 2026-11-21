@@ -735,6 +735,7 @@ async function connect(force){
       S = {}; states.forEach(s => S[s.entity_id] = s);
       pickClimate();
       await send({ type: "subscribe_events", event_type: "state_changed" });
+      send({ type: "subscribe_events", event_type: "panel_scene_check" }).catch(() => {});
       subscribeForecast(); loadOokla(); loadTrend();
       await loadScenes();
       setConn(true); render();
@@ -744,6 +745,10 @@ async function connect(force){
       m.success ? p.res(m.result) : p.rej(new Error(m.error && m.error.message || "failed"));
     }
     else if (m.type === "event" && subs[m.id]) subs[m.id](m.event);
+    else if (m.type === "event" && m.event && m.event.event_type === "panel_scene_check") {
+      const f = String(m.event.data.failed || "").trim();
+      if (f) toast(`${m.event.data.scene}: ${f} still isn't right after retrying`);
+    }
     else if (m.type === "event" && m.event && m.event.event_type === "state_changed") {
       const d = m.event.data;
       if (d.new_state) S[d.entity_id] = d.new_state; else delete S[d.entity_id];
@@ -803,9 +808,9 @@ async function loadScenes(){
   SCENES.forEach(sc => { if (sc.ac && "offAfter" in sc.ac) { delete sc.ac.offAfter; changed = true; } });   // timer feature removed
   buildScenes();
   // Rebuild the scene scripts after an update, or when the AC changed (e.g. a new AC integration).
-  const stale = store.get("scriptsVer", 0) !== 17 || store.get("scriptsClimate", "") !== CONFIG.climate;
+  const stale = store.get("scriptsVer", 0) !== 18 || store.get("scriptsClimate", "") !== CONFIG.climate;
   if (changed) saveScenes(); else syncScripts(stale);
-  store.set("scriptsVer", 17); store.set("scriptsClimate", CONFIG.climate);
+  store.set("scriptsVer", 18); store.set("scriptsClimate", CONFIG.climate);
 }
 async function saveScenes(){
   buildScenes();
@@ -837,7 +842,44 @@ function sceneSequence(sc){
     if (ac.t != null) seq.push({ action: "climate.set_temperature", target: T, data: { temperature: ac.t } });
     if (ac.fan) seq.push({ delay: { seconds: 2 } }, { action: "climate.set_fan_mode", target: T, data: { fan_mode: ac.fan } });
   }
-  return seq;
+  return seq.concat(sceneCheck(sc));
+}
+/* 10 s after a scene runs, Home Assistant checks every light and the AC.
+   Anything that didn't respond gets the command again (lights up to 3x, AC up to 2x).
+   If something still isn't right, the panel shows which one. */
+function sceneCheck(sc){
+  const lights = sc.lights || {}, checks = [], fails = [], ac = sc.ac || {}, A = CONFIG.climate;
+  const nameOf = id => (CONFIG.lights.find(l => l.id === id) || {}).name || id;
+  const loop = (bad, tries, wait, steps) => ({ repeat: {
+    while: [{ condition: "template", value_template: `{{ repeat.index <= ${tries} and (${bad}) }}` }],
+    sequence: steps.concat({ delay: { seconds: wait } }) } });
+  Object.keys(lights).forEach(id => {
+    const v = lights[id]; let bad, steps;
+    if (v.m === "off") { bad = `is_state('${id}','on')`; steps = [{ action: "light.turn_off", target: { entity_id: id } }]; }
+    else if (v.m === "on") {
+      const b = Math.round(255 * (v.b ?? 100) / 100), data = { brightness_pct: v.b ?? 100 };
+      bad = `not is_state('${id}','on') or ((state_attr('${id}','brightness')|int(0)) - ${b})|abs > 10`;
+      if (v.c && v.c.k) { data.color_temp_kelvin = v.c.k; bad += ` or ((state_attr('${id}','color_temp_kelvin')|int(0)) - ${v.c.k})|abs > 300`; }
+      if (v.c && v.c.rgb) { data.rgb_color = v.c.rgb; bad += ` or state_attr('${id}','color_mode') == 'color_temp'`; }
+      steps = [{ action: "light.turn_on", target: { entity_id: id }, data }];
+    } else return;
+    checks.push(loop(bad, 3, 5, steps)); fails.push([nameOf(id), bad]);
+  });
+  if (ac.m === "off") {
+    const bad = `not is_state('${A}','off')`;
+    checks.push(loop(bad, 2, 10, [{ action: "climate.set_hvac_mode", target: { entity_id: A }, data: { hvac_mode: "off" } }])); fails.push(["AC", bad]);
+  }
+  if (ac.m === "set") {
+    const mode = ac.hvac || "cool";
+    let bad = `not is_state('${A}','${mode}')`; if (ac.t != null) bad += ` or (state_attr('${A}','temperature')|float(0)) != ${ac.t}`;
+    const steps = [{ action: "climate.set_hvac_mode", target: { entity_id: A }, data: { hvac_mode: mode } }];
+    if (ac.t != null) steps.push({ delay: { seconds: 2 } }, { action: "climate.set_temperature", target: { entity_id: A }, data: { temperature: ac.t } });
+    checks.push(loop(bad, 2, 10, steps)); fails.push(["AC", bad]);
+  }
+  if (!checks.length) return [];
+  const report = "{% set f = namespace(l=[]) %}" + fails.map(([n, bad]) => `{% if ${bad} %}{% set f.l = f.l + ['${n}'] %}{% endif %}`).join("") + "{{ f.l | join(', ') }}";
+  return [{ delay: { seconds: 10 } }, { parallel: checks },
+    { event: "panel_scene_check", event_data: { scene: sc.name, failed: report } }];
 }
 async function api(method, path, body){
   const token = await getToken();
@@ -1810,7 +1852,7 @@ function demoCall(domain, service, d){
 /* =====================================================================
    Auto-update: reload when a newer version is installed
    ===================================================================== */
-const VERSION = "2026.11.19.17";
+const VERSION = "2026.11.21.1";
 if (!DEMO) setInterval(async () => {
   try { const v = await (await fetch("version.json?t=" + Date.now(), { cache: "no-store" })).json();
     if (v.version && v.version !== VERSION && !sheetMode) location.reload(); } catch {}
