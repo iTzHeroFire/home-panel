@@ -818,9 +818,9 @@ async function runLane(id, lane, job){
   try {
     const realOn = S[id] && (S[id]._opt && watch[id] && watch[id].real ? watch[id].real.state : S[id].state) === "on";
     if (domain === "light" && service === "turn_on" && !realOn && Object.keys(data).some(k => k !== "entity_id")) {
-      // Tapo bug workaround (see tapoOn): plain on → nudged values → exact values
+      // Tapo bug workaround (see tapoOn): exact values (smooth fade) → after the fade, 1% nudge → exact again
       const { entity_id, ...rest } = data;
-      await svc({ entity_id }).catch(() => {}); await wait(800);
+      await svc(data).catch(() => {}); await wait(1500);
       if (!lane.next) { await svc({ entity_id, ...nudge(rest) }).catch(() => {}); await wait(600); }
     }
     if (!lane.next || job.isRetry) await svc(data);
@@ -930,9 +930,9 @@ async function loadScenes(){
   SCENES.forEach(sc => { if (sc.ac && "offAfter" in sc.ac) { delete sc.ac.offAfter; changed = true; } });   // timer feature removed
   buildScenes();
   // Rebuild the scene scripts after an update, or when the AC changed (e.g. a new AC integration).
-  const stale = store.get("scriptsVer", 0) !== 22 || store.get("scriptsClimate", "") !== CONFIG.climate;
+  const stale = store.get("scriptsVer", 0) !== 23 || store.get("scriptsClimate", "") !== CONFIG.climate;
   if (changed) saveScenes(); else syncScripts(stale);
-  store.set("scriptsVer", 22); store.set("scriptsClimate", CONFIG.climate);
+  store.set("scriptsVer", 23); store.set("scriptsClimate", CONFIG.climate);
 }
 async function saveScenes(){
   buildScenes(); if (!DEMO) store.set("scenesCache", SCENES);
@@ -955,9 +955,10 @@ function lightData(v){
 /* Tapo light strips have a known bug: right after being off they report "on" but ignore a turn-on that
    carries brightness/colour. Turning them on plainly first, then setting brightness/colour, works reliably. */
 function tapoOn(id, v){
-  // plain on → a slightly different brightness/colour (forces the strip to really redraw) → the exact values
-  const on = (data, wait) => [{ action: "light.turn_on", target: { entity_id: id }, ...(data ? { data } : {}), continue_on_error: true }, { delay: { milliseconds: wait } }];
-  return [...on(null, 1000), ...on(nudge(lightData(v)), 900),
+  // exact values first (the strip fades in smoothly as normal) → after the fade, a 1% nudge and the exact
+  // values again, which is invisible but makes a strip that ignored the first command actually redraw
+  const on = (data, wait) => [{ action: "light.turn_on", target: { entity_id: id }, data, continue_on_error: true }, { delay: { milliseconds: wait } }];
+  return [...on(lightData(v), 1500), ...on(nudge(lightData(v)), 600),
           { action: "light.turn_on", target: { entity_id: id }, data: lightData(v), continue_on_error: true }];
 }
 /* The strips sometimes accept a command, report it as done, but don't redraw. Sending a value that is
@@ -965,7 +966,7 @@ function tapoOn(id, v){
 function nudge(d){
   const n = { ...d };
   if (n.brightness_pct != null) n.brightness_pct = n.brightness_pct >= 100 ? 99 : n.brightness_pct + 1;
-  if (n.color_temp_kelvin) n.color_temp_kelvin += n.color_temp_kelvin > 2700 ? -150 : 150;
+  if (n.color_temp_kelvin) n.color_temp_kelvin += n.color_temp_kelvin > 2600 ? -60 : 60;
   if (n.rgb_color && n.brightness_pct == null) n.rgb_color = n.rgb_color.map((c, i) => i ? c : (c > 250 ? c - 4 : c + 4));
   return n;
 }
@@ -2052,7 +2053,7 @@ function demoCall(domain, service, d){
 /* =====================================================================
    Auto-update: reload when a newer version is installed
    ===================================================================== */
-const VERSION = "2026.11.22.9";
+const VERSION = "2026.11.23.1";
 /* Home Assistant tells browsers to cache /local files for 31 days, so a plain reload can keep showing an
    old version. Check for a new version when the panel opens, when you come back to it, and every 5 min;
    if there is one, force-refresh the cached page and open it fresh. */
