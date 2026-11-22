@@ -336,6 +336,11 @@ button:active{transform:scale(.94);transition-duration:.08s}
 /* ---------- Polish ---------- */
 .scene.active{border-color:color-mix(in srgb,var(--accent) 55%,transparent);background:color-mix(in srgb,var(--accent) 14%,var(--glass))}
 .scene.active .sic{background:var(--accent);color:var(--accent-ink)}
+.scene .chk{position:absolute;top:9px;right:9px;width:8px;height:8px;border-radius:50%;opacity:0;transition:opacity .3s,background .3s}
+.scene.checking .chk{opacity:1;background:var(--accent);animation:chkpulse 1.1s ease-in-out infinite}
+.scene.ok .chk{opacity:1;background:#34c759}
+.scene.bad .chk{opacity:1;background:#ff9f0a}
+@keyframes chkpulse{50%{opacity:.25;transform:scale(.7)}}
 .light .ls b{color:var(--text);font-weight:600}
 .light.dragging{transform:scale(1.02)}
 .light.dragging .bar{height:6px;bottom:7px}
@@ -746,8 +751,9 @@ async function connect(force){
     }
     else if (m.type === "event" && subs[m.id]) subs[m.id](m.event);
     else if (m.type === "event" && m.event && m.event.event_type === "panel_scene_check") {
-      const f = String(m.event.data.failed || "").trim();
-      if (f) toast(`${m.event.data.scene}: ${f} still isn't right after retrying`);
+      const f = String(m.event.data.failed || "").trim(), n = m.event.data.scene;
+      if (f) { setCheck(n, "bad"); toast(`${n}: ${f} still isn't right after retrying`); }
+      else { const was = checks[n]; setCheck(n, "ok"); if (was === "checking") toast(`${n} ✓ every light and the AC confirmed`); }
     }
     else if (m.type === "event" && m.event && m.event.event_type === "state_changed") {
       const d = m.event.data;
@@ -1182,17 +1188,32 @@ function sceneSummary(sc){
   if (sc.ac && sc.ac.m === "set") parts.push("AC " + (sc.ac.t ?? "") + "°");
   return parts.filter(Boolean).join(" · ") || "No changes yet";
 }
+/* Scene confirmation: a dot on the tile while Home Assistant checks every light and the AC
+   (pulsing), then green = everything confirmed, orange = something didn't respond.
+   No answer at all within ~3 min means the scene script itself didn't run. */
+const checks = {}, checkTimers = {};
+function setCheck(name, st){
+  checks[name] = st; clearTimeout(checkTimers[name]);
+  if (st === "checking") checkTimers[name] = setTimeout(() => { if (checks[name] === "checking") { setCheck(name, "bad"); toast(`${name}: no confirmation from Home Assistant — the scene may not have run`); } }, 200000);
+  if (st === "ok") checkTimers[name] = setTimeout(() => setCheck(name, ""), 8000);
+  renderChecks();
+}
+function renderChecks(){
+  const tiles = $("scenes").querySelectorAll(".scene:not(.add)");
+  SCENES.forEach((sc, i) => { const t = tiles[i], st = checks[sc.name] || ""; if (!t) return;
+    ["checking", "ok", "bad"].forEach(c => t.classList.toggle(c, c === st)); });
+}
 function buildScenes(){
   const wrap = $("scenes"); wrap.innerHTML = "";
   wrap.classList.toggle("editing", editing);
   SCENES.forEach((sc, i) => {
     const b = document.createElement("button");
     b.className = "scene glass";
-    b.innerHTML = `<div class="sic">${icon(sc.icon, 24)}</div><div class="sn">${esc(sc.name)}</div><span class="ed">${icon("edit", 16, 2)}</span>`;
+    b.innerHTML = `<div class="sic">${icon(sc.icon, 24)}</div><div class="sn">${esc(sc.name)}</div><span class="ed">${icon("edit", 16, 2)}</span><i class="chk"></i>`;
     b.onclick = () => {
       if (editing) return openSceneEditor(i);
       b.classList.add("flash"); setTimeout(() => b.classList.remove("flash"), 700);
-      runScene(sc);
+      runScene(sc); setCheck(sc.name, "checking");
     };
     wrap.appendChild(b);
   });
@@ -1208,7 +1229,7 @@ function buildScenes(){
   const cols = phone ? Math.min(Math.max(n, 1), 4) : narrow ? 2 : Math.min(Math.max(n, 1), 5);
   wrap.style.gridTemplateColumns = `repeat(${cols},minmax(0,1fr))`;
   wrap.style.gridTemplateRows = "";
-  renderSceneActive();
+  renderSceneActive(); renderChecks();
   $("editBtn").textContent = editing ? "Done" : "Edit";
   $("editBtn").classList.toggle("on", editing);
 }
@@ -1873,7 +1894,7 @@ function demoCall(domain, service, d){
 /* =====================================================================
    Auto-update: reload when a newer version is installed
    ===================================================================== */
-const VERSION = "2026.11.22.1";
+const VERSION = "2026.11.22.2";
 if (!DEMO) setInterval(async () => {
   try { const v = await (await fetch("version.json?t=" + Date.now(), { cache: "no-store" })).json();
     if (v.version && v.version !== VERSION && !sheetMode) location.reload(); } catch {}
