@@ -793,9 +793,12 @@ async function call(domain, service, data, isRetry){
   if (DEMO) return demoCall(domain, service, data);
   if (domain === "light" && service === "turn_on" && Object.keys(data).some(k => k !== "entity_id")) {
     const offIds = [].concat(data.entity_id || []).filter(id => !S[id] || S[id].state !== "on");
-    if (offIds.length) {   // Tapo bug workaround (see tapoOn): plain on first, then brightness/colour
+    if (offIds.length) {   // Tapo bug workaround (see tapoOn): plain on → nudged values → exact values
+      const { entity_id, ...rest } = data, wait = ms => new Promise(r => setTimeout(r, ms));
       send({ type: "call_service", domain, service, service_data: { entity_id: offIds } }).catch(() => {});
-      await new Promise(r => setTimeout(r, 700));
+      await wait(1000);
+      send({ type: "call_service", domain, service, service_data: { entity_id: offIds, ...nudge(rest) } }).catch(() => {});
+      await wait(900);
     }
   }
   try { await send({ type: "call_service", domain, service, service_data: data }); }
@@ -902,9 +905,9 @@ async function loadScenes(){
   SCENES.forEach(sc => { if (sc.ac && "offAfter" in sc.ac) { delete sc.ac.offAfter; changed = true; } });   // timer feature removed
   buildScenes();
   // Rebuild the scene scripts after an update, or when the AC changed (e.g. a new AC integration).
-  const stale = store.get("scriptsVer", 0) !== 20 || store.get("scriptsClimate", "") !== CONFIG.climate;
+  const stale = store.get("scriptsVer", 0) !== 21 || store.get("scriptsClimate", "") !== CONFIG.climate;
   if (changed) saveScenes(); else syncScripts(stale);
-  store.set("scriptsVer", 20); store.set("scriptsClimate", CONFIG.climate);
+  store.set("scriptsVer", 21); store.set("scriptsClimate", CONFIG.climate);
 }
 async function saveScenes(){
   buildScenes();
@@ -927,8 +930,19 @@ function lightData(v){
 /* Tapo light strips have a known bug: right after being off they report "on" but ignore a turn-on that
    carries brightness/colour. Turning them on plainly first, then setting brightness/colour, works reliably. */
 function tapoOn(id, v){
-  return [{ action: "light.turn_on", target: { entity_id: id }, continue_on_error: true }, { delay: { milliseconds: 700 } },
+  // plain on → a slightly different brightness/colour (forces the strip to really redraw) → the exact values
+  const on = (data, wait) => [{ action: "light.turn_on", target: { entity_id: id }, ...(data ? { data } : {}), continue_on_error: true }, { delay: { milliseconds: wait } }];
+  return [...on(null, 1000), ...on(nudge(lightData(v)), 900),
           { action: "light.turn_on", target: { entity_id: id }, data: lightData(v), continue_on_error: true }];
+}
+/* The strips sometimes accept a command, report it as done, but don't redraw. Sending a value that is
+   1% / 150 K off first, then the real one, makes them actually change. */
+function nudge(d){
+  const n = { ...d };
+  if (n.brightness_pct != null) n.brightness_pct = n.brightness_pct >= 100 ? 99 : n.brightness_pct + 1;
+  if (n.color_temp_kelvin) n.color_temp_kelvin += n.color_temp_kelvin > 2700 ? -150 : 150;
+  if (n.rgb_color && n.brightness_pct == null) n.rgb_color = n.rgb_color.map((c, i) => i ? c : (c > 250 ? c - 4 : c + 4));
+  return n;
 }
 function sceneSequence(sc){
   // Every light gets its own command, all at the same time, and one light failing never stops the others.
@@ -1313,6 +1327,7 @@ function buildScenes(){
     b.onclick = () => {
       if (editing) return openSceneEditor(i);
       b.classList.add("flash"); setTimeout(() => b.classList.remove("flash"), 700);
+      Object.keys(checks).forEach(n => { if (n !== sc.name && checks[n] === "checking") setCheck(n, ""); });   // the previous scene was replaced
       runScene(sc); setCheck(sc.name, "checking");
     };
     wrap.appendChild(b);
@@ -1416,7 +1431,7 @@ function renderAC(){
   if ($("tBig").innerHTML !== tTxt) { const up = t > ($("tBig").dataset.v ?? t); $("tBig").innerHTML = tTxt; $("tBig").dataset.v = t;
     $("tBig").style.setProperty("--dy", up ? "10px" : "-10px"); $("tBig").classList.remove("tick"); void $("tBig").offsetWidth; $("tBig").classList.add("tick"); }
   drawArc(t == null ? 0 : (t - minT) / (maxT - minT), minT, maxT);
-  const room = a.current_temperature != null ? `Room ${Math.round(a.current_temperature)}°` : "";
+  const room = a.current_temperature ? `Room ${Math.round(a.current_temperature)}°` : "";
   $("tSub").textContent = [room, off ? "Off" : MODE_LABEL[s.state] || nice(s.state)].filter(Boolean).join(" · ");
   renderAutoOff();
   renderChips($("modes"), (a.hvac_modes || []).filter(m => m !== "off"), s.state, m => call("climate", "set_hvac_mode", { entity_id: CONFIG.climate, hvac_mode: m }), MODE_LABEL);
@@ -1994,7 +2009,7 @@ function demoCall(domain, service, d){
 /* =====================================================================
    Auto-update: reload when a newer version is installed
    ===================================================================== */
-const VERSION = "2026.11.22.4";
+const VERSION = "2026.11.22.5";
 if (!DEMO) setInterval(async () => {
   try { const v = await (await fetch("version.json?t=" + Date.now(), { cache: "no-store" })).json();
     if (v.version && v.version !== VERSION && !sheetMode) location.reload(); } catch {}
