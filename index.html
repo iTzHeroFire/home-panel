@@ -794,6 +794,7 @@ function scheduleReconnect(){
 }
 document.addEventListener("visibilitychange", () => { if (!DEMO && document.visibilityState === "visible" && (!ws || ws.readyState > 1)) connect(); });
 async function call(domain, service, data, isRetry){
+  if (!isRetry && (domain === "light" || domain === "climate")) stopScenes();   // you took over: a running scene must not undo it
   if (!isRetry) watchCall(domain, service, data);
   if (DEMO) return demoCall(domain, service, data);
   if ((domain === "light" || domain === "climate") && data.entity_id)
@@ -930,9 +931,9 @@ async function loadScenes(){
   SCENES.forEach(sc => { if (sc.ac && "offAfter" in sc.ac) { delete sc.ac.offAfter; changed = true; } });   // timer feature removed
   buildScenes();
   // Rebuild the scene scripts after an update, or when the AC changed (e.g. a new AC integration).
-  const stale = store.get("scriptsVer", 0) !== 24 || store.get("scriptsClimate", "") !== CONFIG.climate;
+  const stale = store.get("scriptsVer", 0) !== 25 || store.get("scriptsClimate", "") !== CONFIG.climate;
   if (changed) saveScenes(); else syncScripts(stale);
-  store.set("scriptsVer", 24); store.set("scriptsClimate", CONFIG.climate);
+  store.set("scriptsVer", 25); store.set("scriptsClimate", CONFIG.climate);
 }
 async function saveScenes(){
   buildScenes(); if (!DEMO) store.set("scenesCache", SCENES);
@@ -987,7 +988,12 @@ function nudge(d){
   if (n.rgb_color && n.brightness_pct == null) n.rgb_color = n.rgb_color.map((c, i) => i ? c : (c > 250 ? c - 4 : c + 4));
   return n;
 }
-function sceneSequence(sc){
+function sceneSequence(sc, self){
+  self = self || scriptKey(sc);
+  const others = SCENES.map(scriptKey).concat("panel_everything_off").filter(k => k !== self).map(k => "script." + k);
+  return [{ action: "script.turn_off", target: { entity_id: others }, continue_on_error: true }].concat(sceneSteps(sc));
+}
+function sceneSteps(sc){
   // Every light gets its own command, all at the same time, and one light failing never stops the others.
   const lights = sc.lights || {}, cmds = [];
   Object.keys(lights).forEach(id => {
@@ -1071,7 +1077,7 @@ async function ensureEverythingOff(){
   const media = mediaEntity();
   // same as a scene with everything off, so it gets the same check-and-retry
   const lights = {}; CONFIG.lights.forEach(l => lights[l.id] = { m: "off" });
-  const seq = sceneSequence({ name: "Everything off", lights, ac: { m: "off" } });
+  const seq = sceneSequence({ name: "Everything off", lights, ac: { m: "off" } }, "panel_everything_off");
   if (media) seq.unshift({ action: "media_player.media_pause", target: { entity_id: media }, continue_on_error: true });
   try { await api("POST", "/api/config/script/config/panel_everything_off", { alias: "Everything off", icon: "mdi:power", mode: "restart", sequence: seq }); }
   catch (e) { console.warn("everything-off script", e); }
@@ -1428,10 +1434,19 @@ function renderSceneActive(){
   const tiles = $("scenes").querySelectorAll(".scene:not(.add)"); let found = false;
   SCENES.forEach((sc, i) => { const on = !found && !editing && sceneActive(sc); if (on) found = true; tiles[i] && tiles[i].classList.toggle("active", on); });
 }
+function stopScenes(exceptKey){
+  if (DEMO) return;
+  Object.keys(S).filter(id => id.startsWith("script.panel_") && id !== exceptKey && S[id].state === "on")
+    .forEach(id => send({ type: "call_service", domain: "script", service: "turn_off", service_data: { entity_id: id } }).catch(() => {}));
+}
+function cancelWatches(){
+  for (const id in watch) { clearTimeout(watch[id].timer); delete watch[id]; markWatch(id, ""); }
+  for (const id in lanes) lanes[id].next = null;
+}
 function runScene(sc){
-  // Stop any other running scene (e.g. a pending AC sleep timer), then run this one in Home Assistant.
+  // Stop any other running scene and any pending light/AC retries, then run this one in Home Assistant.
   const key = "script." + scriptKey(sc);
-  if (!DEMO) Object.keys(S).filter(id => id.startsWith("script.panel_") && id !== key && S[id].state === "on").forEach(id => call("script", "turn_off", { entity_id: id }));
+  stopScenes(key); cancelWatches();
   if (!DEMO && S[key]) return call("script", "turn_on", { entity_id: key });
   runSceneDirect(sc);
 }
@@ -2070,7 +2085,7 @@ function demoCall(domain, service, d){
 /* =====================================================================
    Auto-update: reload when a newer version is installed
    ===================================================================== */
-const VERSION = "2026.11.23.2";
+const VERSION = "2026.11.23.3";
 /* Home Assistant tells browsers to cache /local files for 31 days, so a plain reload can keep showing an
    old version. Check for a new version when the panel opens, when you come back to it, and every 5 min;
    if there is one, force-refresh the cached page and open it fresh. */
