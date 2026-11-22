@@ -336,10 +336,11 @@ button:active{transform:scale(.94);transition-duration:.08s}
 /* ---------- Polish ---------- */
 .scene.active{border-color:color-mix(in srgb,var(--accent) 55%,transparent);background:color-mix(in srgb,var(--accent) 14%,var(--glass))}
 .scene.active .sic{background:var(--accent);color:var(--accent-ink)}
-.scene .chk{position:absolute;top:9px;right:9px;width:8px;height:8px;border-radius:50%;opacity:0;transition:opacity .3s,background .3s}
-.scene.checking .chk{opacity:1;background:var(--accent);animation:chkpulse 1.1s ease-in-out infinite}
-.scene.ok .chk{opacity:1;background:#34c759}
-.scene.bad .chk{opacity:1;background:#ff9f0a}
+.chk{position:absolute;top:9px;right:9px;width:8px;height:8px;border-radius:50%;opacity:0;transition:opacity .3s,background .3s;pointer-events:none;z-index:2}
+.vchk>.chk,.vchk .achead>.chk{opacity:1;background:var(--accent);animation:chkpulse 1.1s ease-in-out infinite}
+.vok>.chk,.vok .achead>.chk{opacity:1;background:#34c759}
+.vbad>.chk,.vbad .achead>.chk{opacity:1;background:#ff9f0a}
+.achead>.chk{position:static;margin:0 10px 0 auto;flex:none}
 @keyframes chkpulse{50%{opacity:.25;transform:scale(.7)}}
 .light .ls b{color:var(--text);font-weight:600}
 .light.dragging{transform:scale(1.02)}
@@ -499,7 +500,7 @@ body.isnight .night{opacity:1}
 
   <section class="rcol">
   <section class="ac glass tapcard" id="ac">
-    <div class="achead"><span class="lab" id="acName">Air conditioner</span><button class="power" id="acPower" aria-label="AC power"></button></div>
+    <div class="achead"><span class="lab" id="acName">Air conditioner</span><i class="chk"></i><button class="power" id="acPower" aria-label="AC power"></button></div>
     <div class="dialrow"><button class="step" id="tDown" aria-label="Lower"></button>
     <div class="dialwrap">
       <svg class="arc" viewBox="0 0 220 200" id="arcSvg"></svg>
@@ -787,10 +788,89 @@ function scheduleReconnect(){
   setTimeout(() => connect(), 500 * 2 ** retry);
 }
 document.addEventListener("visibilitychange", () => { if (!DEMO && document.visibilityState === "visible" && (!ws || ws.readyState > 1)) connect(); });
-async function call(domain, service, data){
+async function call(domain, service, data, isRetry){
+  if (!isRetry) watchCall(domain, service, data);
   if (DEMO) return demoCall(domain, service, data);
   try { await send({ type: "call_service", domain, service, service_data: data }); }
-  catch (e) { toast("Couldn't do that: " + e.message); }
+  catch (e) { if (!isRetry) toast("Couldn't do that: " + e.message); }
+}
+
+/* Every light and AC command is confirmed: a few seconds later the panel asks the device for its
+   real state, and if it doesn't match what you asked for, sends the command again (up to 3 times;
+   a light that dropped off gets its connection restarted). The tile shows a dot while checking —
+   green = confirmed, orange = didn't respond. */
+const watch = {};   // entity_id -> { expect, calls, tries, timer }
+function watchCall(domain, service, data){
+  if (domain !== "light" && domain !== "climate") return;
+  if (domain === "light" && data.effect) return;
+  const ids = [].concat(data.entity_id || []);
+  ids.forEach(id => {
+    const d = { ...data, entity_id: id };
+    let w = watch[id];
+    if (!w || service === "turn_off" || (domain === "climate" && service === "set_hvac_mode" && data.hvac_mode === "off") || (domain === "light" && w.calls.turn_off))
+      w = { expect: {}, calls: {} };
+    clearTimeout(w.timer); w.tries = 0;
+    if (domain === "light") {
+      if (service === "turn_off") { w.expect = { state: "off" }; w.calls = { turn_off: d }; }
+      else {
+        w.expect.state = "on";
+        if (data.brightness_pct != null) w.expect.b = data.brightness_pct;
+        if (data.color_temp_kelvin) { w.expect.k = data.color_temp_kelvin; delete w.expect.rgb; }
+        if (data.rgb_color) { w.expect.rgb = true; delete w.expect.k; }
+        w.calls.turn_on = { ...(w.calls.turn_on || {}), ...d };
+      }
+    } else {
+      if (service === "set_hvac_mode") w.expect.state = data.hvac_mode;
+      if (service === "turn_off") w.expect.state = "off";
+      if (service === "set_temperature") w.expect.t = data.temperature;
+      if (service === "set_fan_mode") w.expect.fan = data.fan_mode;
+      if (service === "set_swing_mode") w.expect.swing = data.swing_mode;
+      if (service === "turn_off" && w.expect.state === "off") w.calls = { set_hvac_mode: { entity_id: id, hvac_mode: "off" } };
+      else w.calls[service] = d;
+    }
+    w.domain = domain; watch[id] = w; markWatch(id, "vchk");
+    w.timer = setTimeout(() => verifyWatch(id), domain === "climate" ? 9000 : 4000);
+  });
+}
+function watchBad(id){
+  const w = watch[id], s = S[id], e = w.expect; if (!s) return true;
+  if (e.state && s.state !== e.state) return true;
+  const a = s.attributes;
+  if (w.domain === "light" && e.state === "on") {
+    if (e.b != null && Math.abs((a.brightness || 0) - e.b * 2.55) > 10) return true;
+    if (e.k && Math.abs((a.color_temp_kelvin || 0) - e.k) > 300) return true;
+    if (e.rgb && a.color_mode === "color_temp") return true;
+  }
+  if (w.domain === "climate") {
+    if (e.t != null && Number(a.temperature) !== Number(e.t)) return true;
+    if (e.fan && a.fan_mode !== e.fan) return true;
+    if (e.swing && a.swing_mode !== e.swing) return true;
+  }
+  return false;
+}
+async function verifyWatch(id){
+  const w = watch[id]; if (!w) return;
+  if (!DEMO) { try { await send({ type: "call_service", domain: "homeassistant", service: "update_entity", service_data: { entity_id: id } }); } catch {} }
+  await new Promise(r => setTimeout(r, 1500));
+  if (watch[id] !== w) return;                       // a newer command took over
+  if (!watchBad(id)) { markWatch(id, "vok"); w.timer = setTimeout(() => { if (watch[id] === w) { delete watch[id]; markWatch(id, ""); } }, 4000); return; }
+  if (w.tries >= 3) {
+    markWatch(id, "vbad"); delete watch[id];
+    const name = id === CONFIG.climate ? "The AC" : (CONFIG.lights.find(l => l.id === id) || {}).name || id;
+    toast(`${name} didn't respond — check it's powered and on Wi-Fi`); return;
+  }
+  w.tries++;
+  if (S[id] && S[id].state === "unavailable" && w.tries >= 2)
+    call("homeassistant", "reload_config_entry", { entity_id: id }, true);
+  const order = ["turn_off", "set_hvac_mode", "turn_on", "set_temperature", "set_fan_mode", "set_swing_mode"];
+  let delay = w.tries >= 2 && S[id] && S[id].state === "unavailable" ? 8000 : 0;
+  order.filter(k => w.calls[k]).forEach(k => { const c = w.calls[k]; setTimeout(() => { if (watch[id] === w) call(w.domain, k, c, true); }, delay); delay += w.domain === "climate" ? 2000 : 0; });
+  w.timer = setTimeout(() => verifyWatch(id), delay + (w.domain === "climate" ? 9000 : 4000));
+}
+function markWatch(id, cls){
+  const i = CONFIG.lights.findIndex(l => l.id === id);
+  const el = i >= 0 ? $("L" + i) : id === CONFIG.climate ? $("ac") : null; if (!el) return;
+  ["vchk", "vok", "vbad"].forEach(c => el.classList.toggle(c, c === cls));
 }
 function setConn(ok, txt){ $("conn").classList.toggle("ok", ok); $("connTxt").textContent = ok ? (DEMO ? "Demo" : "Live") : txt; }
 
@@ -1135,7 +1215,7 @@ function buildLights(){
   CONFIG.lights.forEach((l, i) => {
     const el = document.createElement("button");
     el.className = "light glass"; el.id = "L" + i;
-    el.innerHTML = `<div class="art2">${illustration(l.art, i)}</div><div class="ln">${esc(l.name)}</div><div class="ls">Off</div><div class="bar"><i></i></div>`;
+    el.innerHTML = `<div class="art2">${illustration(l.art, i)}</div><div class="ln">${esc(l.name)}</div><div class="ls">Off</div><div class="bar"><i></i></div><i class="chk"></i>`;
     // tap = on/off · swipe left/right = brightness · long-press = colour & effects
     let timer = null, long = false, sx = 0, sy = 0, sliding = false, startPct = 0, pct = 0;
     let touchy = false;
@@ -1201,7 +1281,7 @@ function setCheck(name, st){
 function renderChecks(){
   const tiles = $("scenes").querySelectorAll(".scene:not(.add)");
   SCENES.forEach((sc, i) => { const t = tiles[i], st = checks[sc.name] || ""; if (!t) return;
-    ["checking", "ok", "bad"].forEach(c => t.classList.toggle(c, c === st)); });
+    [["checking", "vchk"], ["ok", "vok"], ["bad", "vbad"]].forEach(([k, c]) => t.classList.toggle(c, k === st)); });
 }
 function buildScenes(){
   const wrap = $("scenes"); wrap.innerHTML = "";
@@ -1894,7 +1974,7 @@ function demoCall(domain, service, d){
 /* =====================================================================
    Auto-update: reload when a newer version is installed
    ===================================================================== */
-const VERSION = "2026.11.22.2";
+const VERSION = "2026.11.22.3";
 if (!DEMO) setInterval(async () => {
   try { const v = await (await fetch("version.json?t=" + Date.now(), { cache: "no-store" })).json();
     if (v.version && v.version !== VERSION && !sheetMode) location.reload(); } catch {}
