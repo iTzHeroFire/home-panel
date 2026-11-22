@@ -791,6 +791,13 @@ document.addEventListener("visibilitychange", () => { if (!DEMO && document.visi
 async function call(domain, service, data, isRetry){
   if (!isRetry) watchCall(domain, service, data);
   if (DEMO) return demoCall(domain, service, data);
+  if (domain === "light" && service === "turn_on" && Object.keys(data).some(k => k !== "entity_id")) {
+    const offIds = [].concat(data.entity_id || []).filter(id => !S[id] || S[id].state !== "on");
+    if (offIds.length) {   // Tapo bug workaround (see tapoOn): plain on first, then brightness/colour
+      send({ type: "call_service", domain, service, service_data: { entity_id: offIds } }).catch(() => {});
+      await new Promise(r => setTimeout(r, 700));
+    }
+  }
   try { await send({ type: "call_service", domain, service, service_data: data }); }
   catch (e) { if (!isRetry) toast("Couldn't do that: " + e.message); }
 }
@@ -828,8 +835,8 @@ function watchCall(domain, service, data){
       if (service === "turn_off" && w.expect.state === "off") w.calls = { set_hvac_mode: { entity_id: id, hvac_mode: "off" } };
       else w.calls[service] = d;
     }
-    w.domain = domain; watch[id] = w; markWatch(id, "vchk");
-    w.timer = setTimeout(() => verifyWatch(id), domain === "climate" ? 9000 : 4000);
+    w.domain = domain; watch[id] = w; markWatch(id, "");
+    w.timer = setTimeout(() => verifyWatch(id), domain === "climate" ? 8000 : 2500);
   });
 }
 function watchBad(id){
@@ -853,19 +860,20 @@ async function verifyWatch(id){
   if (!DEMO) { try { await send({ type: "call_service", domain: "homeassistant", service: "update_entity", service_data: { entity_id: id } }); } catch {} }
   await new Promise(r => setTimeout(r, 1500));
   if (watch[id] !== w) return;                       // a newer command took over
-  if (!watchBad(id)) { markWatch(id, "vok"); w.timer = setTimeout(() => { if (watch[id] === w) { delete watch[id]; markWatch(id, ""); } }, 4000); return; }
+  if (S[id] && S[id]._opt && w.real) { S[id] = w.real; scheduleRender(); }   // no update came back: the light ignored it
+  if (!watchBad(id)) { delete watch[id]; if (w.tries) { markWatch(id, "vok"); setTimeout(() => markWatch(id, ""), 3000); } return; }
   if (w.tries >= 3) {
     markWatch(id, "vbad"); delete watch[id];
     const name = id === CONFIG.climate ? "The AC" : (CONFIG.lights.find(l => l.id === id) || {}).name || id;
     toast(`${name} didn't respond — check it's powered and on Wi-Fi`); return;
   }
-  w.tries++;
+  w.tries++; markWatch(id, "vchk");
   if (S[id] && S[id].state === "unavailable" && w.tries >= 2)
     call("homeassistant", "reload_config_entry", { entity_id: id }, true);
   const order = ["turn_off", "set_hvac_mode", "turn_on", "set_temperature", "set_fan_mode", "set_swing_mode"];
   let delay = w.tries >= 2 && S[id] && S[id].state === "unavailable" ? 8000 : 0;
   order.filter(k => w.calls[k]).forEach(k => { const c = w.calls[k]; setTimeout(() => { if (watch[id] === w) call(w.domain, k, c, true); }, delay); delay += w.domain === "climate" ? 2000 : 0; });
-  w.timer = setTimeout(() => verifyWatch(id), delay + (w.domain === "climate" ? 9000 : 4000));
+  w.timer = setTimeout(() => verifyWatch(id), delay + (w.domain === "climate" ? 8000 : 2500));
 }
 function markWatch(id, cls){
   const i = CONFIG.lights.findIndex(l => l.id === id);
@@ -894,9 +902,9 @@ async function loadScenes(){
   SCENES.forEach(sc => { if (sc.ac && "offAfter" in sc.ac) { delete sc.ac.offAfter; changed = true; } });   // timer feature removed
   buildScenes();
   // Rebuild the scene scripts after an update, or when the AC changed (e.g. a new AC integration).
-  const stale = store.get("scriptsVer", 0) !== 19 || store.get("scriptsClimate", "") !== CONFIG.climate;
+  const stale = store.get("scriptsVer", 0) !== 20 || store.get("scriptsClimate", "") !== CONFIG.climate;
   if (changed) saveScenes(); else syncScripts(stale);
-  store.set("scriptsVer", 19); store.set("scriptsClimate", CONFIG.climate);
+  store.set("scriptsVer", 20); store.set("scriptsClimate", CONFIG.climate);
 }
 async function saveScenes(){
   buildScenes();
@@ -916,13 +924,19 @@ function lightData(v){
   if (v.c && v.c.k) data.color_temp_kelvin = v.c.k; if (v.c && v.c.rgb) data.rgb_color = v.c.rgb;
   return data;
 }
+/* Tapo light strips have a known bug: right after being off they report "on" but ignore a turn-on that
+   carries brightness/colour. Turning them on plainly first, then setting brightness/colour, works reliably. */
+function tapoOn(id, v){
+  return [{ action: "light.turn_on", target: { entity_id: id }, continue_on_error: true }, { delay: { milliseconds: 700 } },
+          { action: "light.turn_on", target: { entity_id: id }, data: lightData(v), continue_on_error: true }];
+}
 function sceneSequence(sc){
   // Every light gets its own command, all at the same time, and one light failing never stops the others.
   const lights = sc.lights || {}, cmds = [];
   Object.keys(lights).forEach(id => {
     const v = lights[id];
     if (v.m === "off") cmds.push({ action: "light.turn_off", target: { entity_id: id }, continue_on_error: true });
-    if (v.m === "on") cmds.push({ action: "light.turn_on", target: { entity_id: id }, data: lightData(v), continue_on_error: true });
+    if (v.m === "on") cmds.push({ sequence: tapoOn(id, v) });
   });
   const ac = sc.ac || {}, T = { entity_id: CONFIG.climate }, acSeq = [];
   if (ac.m === "off") acSeq.push({ action: "climate.set_hvac_mode", target: T, data: { hvac_mode: "off" }, continue_on_error: true });
@@ -956,7 +970,7 @@ function sceneCheck(sc){
       bad = `not is_state('${id}','on') or ((state_attr('${id}','brightness')|int(0)) - ${b})|abs > 10`;
       if (v.c && v.c.k) bad += ` or ((state_attr('${id}','color_temp_kelvin')|int(0)) - ${v.c.k})|abs > 300`;
       if (v.c && v.c.rgb) bad += ` or state_attr('${id}','color_mode') == 'color_temp'`;
-      cmd = { action: "light.turn_on", target: { entity_id: id }, data: lightData(v), continue_on_error: true };
+      cmd = { sequence: tapoOn(id, v) };
     }
     const revive = { if: [{ condition: "state", entity_id: id, state: "unavailable" }],
       then: [{ action: "homeassistant.reload_config_entry", target: { entity_id: id }, continue_on_error: true },
@@ -1243,7 +1257,13 @@ function buildLights(){
     wrap.appendChild(el);
   });
 }
-function toggleLight(id){ const s = S[id]; if (s) call("light", s.state === "on" ? "turn_off" : "turn_on", { entity_id: id }); }
+function toggleLight(id){
+  const s = S[id]; if (!s || s.state === "unavailable") return s && toast("That light is offline");
+  const on = s.state === "on";
+  S[id] = { ...s, state: on ? "off" : "on", _opt: true }; scheduleRender();   // show it straight away; the real state follows
+  call("light", on ? "turn_off" : "turn_on", { entity_id: id });
+  if (watch[id]) watch[id].real = s;
+}
 const pctOf = s => s && s.state === "on" ? Math.max(1, Math.round((s.attributes.brightness || 255) / 2.55)) : 0;
 function renderLights(){
   CONFIG.lights.forEach((l, i) => {
@@ -1946,7 +1966,7 @@ function demoStates(){
 }
 function demoCall(domain, service, d){
   [].concat(d.entity_id).forEach(id => {
-    const s = S[id]; if (!s) return; const a = s.attributes;
+    const s = S[id]; if (!s) return; const a = s.attributes; delete s._opt;
     if (domain === "light") {
       if (service === "turn_off") s.state = "off";
       else { if (service === "turn_on" && s.state === "off" && d.brightness_pct == null && !a.brightness) a.brightness = 180;
@@ -1974,7 +1994,7 @@ function demoCall(domain, service, d){
 /* =====================================================================
    Auto-update: reload when a newer version is installed
    ===================================================================== */
-const VERSION = "2026.11.22.3";
+const VERSION = "2026.11.22.4";
 if (!DEMO) setInterval(async () => {
   try { const v = await (await fetch("version.json?t=" + Date.now(), { cache: "no-store" })).json();
     if (v.version && v.version !== VERSION && !sheetMode) location.reload(); } catch {}
