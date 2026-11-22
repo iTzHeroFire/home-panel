@@ -293,8 +293,8 @@ header{grid-area:head;display:flex;align-items:flex-end;justify-content:space-be
 .idle .ic{font-size:150px;font-weight:100;letter-spacing:-6px;color:rgba(255,255,255,.82);font-variant-numeric:tabular-nums;line-height:1}
 .idle .id{font-size:20px;color:rgba(255,255,255,.4);margin-top:14px}
 .idle .is{font-size:16px;color:rgba(255,255,255,.3);margin-top:28px;display:flex;gap:22px}
-.toast{position:fixed;left:50%;top:20px;transform:translate(-50%,-140%);z-index:60;padding:12px 18px;border-radius:18px;font-size:14px;font-weight:500;
-  background:rgba(40,40,46,.92);transition:transform .3s,visibility 0s .3s;max-width:90vw;visibility:hidden}
+.toast{position:fixed;left:50%;top:calc(12px + env(safe-area-inset-top));transform:translate(-50%,-140%);z-index:60;padding:12px 18px;border-radius:18px;font-size:14px;font-weight:500;
+  background:rgba(28,28,32,.97);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.1);box-shadow:0 10px 30px rgba(0,0,0,.5);transition:transform .3s,visibility 0s .3s;max-width:90vw;visibility:hidden}
 .toast.show{transform:translate(-50%,0);visibility:visible;transition:transform .3s}
 
 /* ---------- Motion ---------- */
@@ -387,10 +387,10 @@ body.isnight .night{opacity:1}
   .app::-webkit-scrollbar{display:none}
   .side,.main,.rcol{display:contents}
   .app>*,.side>*,.main>*,.rcol>*{margin-inline:14px;min-width:0}
-  header{grid-area:head;scroll-snap-align:start;padding:0 2px}
+  header{grid-area:head;scroll-snap-align:start;scroll-margin-left:14px;padding:0 2px}
   #sHead{grid-area:shead;min-height:22px}#lHead{grid-area:lhead;min-height:22px}
   .scenes{grid-area:scenes;gap:8px;grid-auto-rows:auto}
-  .roomcard{grid-area:room;min-height:0;scroll-snap-align:start}
+  .roomcard{grid-area:room;min-height:0;scroll-snap-align:start;scroll-margin-left:14px}
   /* page-2 cards fill their area without stretching page-1 rows */
   .roomcard,.wx,.net,.lyp{contain:size;min-height:0}
   .wx{overflow:hidden}
@@ -2051,11 +2051,23 @@ function demoCall(domain, service, d){
 /* =====================================================================
    Auto-update: reload when a newer version is installed
    ===================================================================== */
-const VERSION = "2026.11.22.7";
-if (!DEMO) setInterval(async () => {
-  try { const v = await (await fetch("version.json?t=" + Date.now(), { cache: "no-store" })).json();
-    if (v.version && v.version !== VERSION && !sheetMode) location.reload(); } catch {}
-}, 5 * 60000);
+const VERSION = "2026.11.22.8";
+/* Home Assistant tells browsers to cache /local files for 31 days, so a plain reload can keep showing an
+   old version. Check for a new version when the panel opens, when you come back to it, and every 5 min;
+   if there is one, force-refresh the cached page and open it fresh. */
+async function checkUpdate(){
+  if (DEMO || sheetMode) return;
+  try {
+    const v = await (await fetch("version.json?t=" + Date.now(), { cache: "no-store" })).json();
+    if (!v.version || v.version === VERSION) return;
+    if (sessionStorage.getItem("panelUpd") === v.version) return;          // already tried this one in this session
+    sessionStorage.setItem("panelUpd", v.version);
+    await fetch(location.pathname, { cache: "reload" }).catch(() => {});      // replaces the stale cached copy
+    location.replace(location.pathname + "?v=" + encodeURIComponent(v.version));
+  } catch {}
+}
+if (!DEMO) { setTimeout(checkUpdate, 1500); setInterval(checkUpdate, 5 * 60000);
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") checkUpdate(); }); }
 
 /* =====================================================================
    Start
