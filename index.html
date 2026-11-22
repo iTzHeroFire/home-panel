@@ -791,18 +791,37 @@ document.addEventListener("visibilitychange", () => { if (!DEMO && document.visi
 async function call(domain, service, data, isRetry){
   if (!isRetry) watchCall(domain, service, data);
   if (DEMO) return demoCall(domain, service, data);
-  if (domain === "light" && service === "turn_on" && Object.keys(data).some(k => k !== "entity_id")) {
-    const offIds = [].concat(data.entity_id || []).filter(id => !S[id] || S[id].state !== "on");
-    if (offIds.length) {   // Tapo bug workaround (see tapoOn): plain on → nudged values → exact values
-      const { entity_id, ...rest } = data, wait = ms => new Promise(r => setTimeout(r, ms));
-      send({ type: "call_service", domain, service, service_data: { entity_id: offIds } }).catch(() => {});
-      await wait(1000);
-      send({ type: "call_service", domain, service, service_data: { entity_id: offIds, ...nudge(rest) } }).catch(() => {});
-      await wait(900);
-    }
-  }
+  if ((domain === "light" || domain === "climate") && data.entity_id)
+    return [].concat(data.entity_id).forEach(id => laneCall(id, domain, service, { ...data, entity_id: id }, isRetry));
   try { await send({ type: "call_service", domain, service, service_data: data }); }
   catch (e) { if (!isRetry) toast("Couldn't do that: " + e.message); }
+}
+/* One command at a time per device. Tapping fast used to fire a pile of commands at the strips at once,
+   which jams them. Now each light/AC finishes its current command first, and if you tapped more in the
+   meantime only your LAST choice is sent (earlier ones are dropped). Different devices still run in parallel. */
+const lanes = {};
+function laneCall(id, domain, service, data, isRetry){
+  const lane = lanes[id] || (lanes[id] = { busy: false, next: null });
+  const job = { domain, service, data, isRetry };
+  if (lane.busy) { if (service === "turn_on" && lane.next && lane.next.service === "turn_on") job.data = { ...lane.next.data, ...data }; lane.next = job; return; }
+  runLane(id, lane, job);
+}
+async function runLane(id, lane, job){
+  lane.busy = true;
+  const { domain, service, data } = job, wait = ms => new Promise(r => setTimeout(r, ms));
+  const svc = d => Promise.race([send({ type: "call_service", domain, service, service_data: d }), wait(8000).then(() => { throw new Error("timed out"); })]);
+  try {
+    const realOn = S[id] && (S[id]._opt && watch[id] && watch[id].real ? watch[id].real.state : S[id].state) === "on";
+    if (domain === "light" && service === "turn_on" && !realOn && Object.keys(data).some(k => k !== "entity_id")) {
+      // Tapo bug workaround (see tapoOn): plain on → nudged values → exact values
+      const { entity_id, ...rest } = data;
+      await svc({ entity_id }).catch(() => {}); await wait(800);
+      if (!lane.next) { await svc({ entity_id, ...nudge(rest) }).catch(() => {}); await wait(600); }
+    }
+    if (!lane.next || job.isRetry) await svc(data);
+  } catch (e) { if (!job.isRetry) toast("Couldn't do that: " + e.message); }
+  const next = lane.next; lane.next = null;
+  if (next) { await wait(250); runLane(id, lane, next); } else lane.busy = false;
 }
 
 /* Every light and AC command is confirmed: a few seconds later the panel asks the device for its
@@ -1317,6 +1336,7 @@ function renderChecks(){
   SCENES.forEach((sc, i) => { const t = tiles[i], st = checks[sc.name] || ""; if (!t) return;
     [["checking", "vchk"], ["ok", "vok"], ["bad", "vbad"]].forEach(([k, c]) => t.classList.toggle(c, k === st)); });
 }
+let sceneTapT = null, lastScene = "";
 function buildScenes(){
   const wrap = $("scenes"); wrap.innerHTML = "";
   wrap.classList.toggle("editing", editing);
@@ -1328,7 +1348,13 @@ function buildScenes(){
       if (editing) return openSceneEditor(i);
       b.classList.add("flash"); setTimeout(() => b.classList.remove("flash"), 700);
       Object.keys(checks).forEach(n => { if (n !== sc.name && checks[n] === "checking") setCheck(n, ""); });   // the previous scene was replaced
-      runScene(sc); setCheck(sc.name, "checking");
+      setCheck(sc.name, "checking");
+      // tapping quickly: wait until you stop for 0.6 s, then run only the last scene you picked
+      clearTimeout(sceneTapT); sceneTapT = setTimeout(() => {
+        const key = "script." + scriptKey(sc);
+        if (lastScene === sc.name && S[key] && S[key].state === "on") return;   // already running this one
+        lastScene = sc.name; runScene(sc);
+      }, 600);
     };
     wrap.appendChild(b);
   });
@@ -2009,7 +2035,7 @@ function demoCall(domain, service, d){
 /* =====================================================================
    Auto-update: reload when a newer version is installed
    ===================================================================== */
-const VERSION = "2026.11.22.5";
+const VERSION = "2026.11.22.6";
 if (!DEMO) setInterval(async () => {
   try { const v = await (await fetch("version.json?t=" + Date.now(), { cache: "no-store" })).json();
     if (v.version && v.version !== VERSION && !sheetMode) location.reload(); } catch {}
