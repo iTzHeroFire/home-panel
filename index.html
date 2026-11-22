@@ -727,19 +727,24 @@ function send(msg){
   });
 }
 async function connect(force){
-  setConn(false, "Connecting");
-  let token;
-  try { token = await getToken(force); } catch (e) { if (String(e).includes("signin")) return; return scheduleReconnect(); }
-  ws = new WebSocket(ORIGIN.replace(/^http/, "ws") + "/api/websocket");
+  setConn(false, Object.keys(S).length ? "Updating" : "Connecting");
+  // Open the connection and refresh the login token at the same time (used to be one after the other).
+  let tokenErr = null;
+  const tokenP = getToken(force).catch(e => { tokenErr = e; return null; });
+  const sock = ws = new WebSocket(ORIGIN.replace(/^http/, "ws") + "/api/websocket");
   ws.onmessage = async ev => {
     const m = JSON.parse(ev.data);
-    if (m.type === "auth_required") ws.send(JSON.stringify({ type: "auth", access_token: token }));
+    if (m.type === "auth_required") {
+      const token = await tokenP;
+      if (!token) { sock.onclose = null; sock.close(); if (!String(tokenErr).includes("signin")) scheduleReconnect(); return; }
+      sock.send(JSON.stringify({ type: "auth", access_token: token }));
+    }
     else if (m.type === "auth_invalid") { ws.onclose = null; ws.close(); connect(true); }
     else if (m.type === "auth_ok") {
       retry = 0; offlineSince = 0; msgId = 1; pending = {}; subs = {};
       const states = await send({ type: "get_states" });
       S = {}; states.forEach(s => S[s.entity_id] = s);
-      pickClimate();
+      pickClimate(); setConn(true); render(); saveStateCache(true);
       await send({ type: "subscribe_events", event_type: "state_changed" });
       send({ type: "subscribe_events", event_type: "panel_scene_check" }).catch(() => {});
       subscribeForecast(); loadOokla(); loadTrend();
@@ -920,6 +925,7 @@ async function loadScenes(){
   if (DEMO) v = store.get("demoScenes", null);
   else { try { v = (await send({ type: "frontend/get_user_data", key: SCENES_KEY })).value; } catch {} }
   SCENES = Array.isArray(v) && v.length ? v : JSON.parse(JSON.stringify(DEFAULT_SCENES));
+  if (!DEMO) store.set("scenesCache", SCENES);
   let changed = false;
   SCENES.forEach(sc => { if (sc.ac && "offAfter" in sc.ac) { delete sc.ac.offAfter; changed = true; } });   // timer feature removed
   buildScenes();
@@ -929,7 +935,7 @@ async function loadScenes(){
   store.set("scriptsVer", 21); store.set("scriptsClimate", CONFIG.climate);
 }
 async function saveScenes(){
-  buildScenes();
+  buildScenes(); if (!DEMO) store.set("scenesCache", SCENES);
   if (DEMO) return store.set("demoScenes", SCENES);
   try { await send({ type: "frontend/set_user_data", key: SCENES_KEY, value: SCENES }); }
   catch (e) { toast("Couldn't save scenes: " + e.message); }
@@ -1104,7 +1110,17 @@ async function syncScripts(force){
    ===================================================================== */
 let renderQueued = false;
 function scheduleRender(){ if (!renderQueued) { renderQueued = true; requestAnimationFrame(() => { renderQueued = false; render(); }); } }
-function render(){ renderSceneActive(); renderSummary(); renderLights(); renderAC(); renderMusic(); renderWeather(); renderNet(); renderBatteries(); renderRoom(); renderIdleSummary(); }
+/* Remember the last known states so the panel shows them instantly when opened,
+   then updates the moment Home Assistant answers. */
+let cacheT = 0;
+const CACHE_DOMAINS = /^(light|climate|media_player|weather|script|automation|sensor|binary_sensor)\./;
+function saveStateCache(now){
+  if (DEMO || (!now && Date.now() - cacheT < 30000)) return; cacheT = Date.now();
+  const snap = {}; for (const id in S) if (CACHE_DOMAINS.test(id)) { const { context, ...rest } = S[id]; snap[id] = rest; }
+  store.set("stateCache", snap);
+}
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") saveStateCache(true); });
+function render(){ saveStateCache(); renderSceneActive(); renderSummary(); renderLights(); renderAC(); renderMusic(); renderWeather(); renderNet(); renderBatteries(); renderRoom(); renderIdleSummary(); }
 
 /* ---- One-line summary under the greeting ---- */
 let todayStr = "";
@@ -2035,7 +2051,7 @@ function demoCall(domain, service, d){
 /* =====================================================================
    Auto-update: reload when a newer version is installed
    ===================================================================== */
-const VERSION = "2026.11.22.6";
+const VERSION = "2026.11.22.7";
 if (!DEMO) setInterval(async () => {
   try { const v = await (await fetch("version.json?t=" + Date.now(), { cache: "no-store" })).json();
     if (v.version && v.version !== VERSION && !sheetMode) location.reload(); } catch {}
@@ -2081,7 +2097,12 @@ if (DEMO) {
   forecast = conds.map((c, i) => ({ datetime: new Date(+h0 + (i + 1) * 3600000).toISOString(), condition: c, temperature: 30 - Math.min(i, 8) * .8 + Math.max(0, i - 10) * 1.2, precipitation_probability: c === "rainy" ? 60 : 5 }));
   loadScenes(); setConn(true); render(); loadTrend();
 }
-else { SCENES = JSON.parse(JSON.stringify(DEFAULT_SCENES)); buildScenes(); connect(); }
+else {
+  SCENES = store.get("scenesCache", null) || JSON.parse(JSON.stringify(DEFAULT_SCENES)); buildScenes();
+  S = store.get("stateCache", {}) || {};
+  if (Object.keys(S).length) { pickClimate(); render(); }     // last known states, instantly
+  connect();
+}
 </script>
 </body>
 </html>
