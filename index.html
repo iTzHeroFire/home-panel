@@ -930,9 +930,9 @@ async function loadScenes(){
   SCENES.forEach(sc => { if (sc.ac && "offAfter" in sc.ac) { delete sc.ac.offAfter; changed = true; } });   // timer feature removed
   buildScenes();
   // Rebuild the scene scripts after an update, or when the AC changed (e.g. a new AC integration).
-  const stale = store.get("scriptsVer", 0) !== 21 || store.get("scriptsClimate", "") !== CONFIG.climate;
+  const stale = store.get("scriptsVer", 0) !== 22 || store.get("scriptsClimate", "") !== CONFIG.climate;
   if (changed) saveScenes(); else syncScripts(stale);
-  store.set("scriptsVer", 21); store.set("scriptsClimate", CONFIG.climate);
+  store.set("scriptsVer", 22); store.set("scriptsClimate", CONFIG.climate);
 }
 async function saveScenes(){
   buildScenes(); if (!DEMO) store.set("scenesCache", SCENES);
@@ -1051,11 +1051,11 @@ const AUTO_OFF = "07:30";
 async function ensureEverythingOff(){
   if (DEMO) return;
   const media = mediaEntity();
-  const seq = [
-    { action: "light.turn_off", target: { entity_id: CONFIG.lights.map(l => l.id) } },
-    { action: "climate.set_hvac_mode", target: { entity_id: CONFIG.climate }, data: { hvac_mode: "off" }, continue_on_error: true }];
-  if (media) seq.push({ action: "media_player.media_pause", target: { entity_id: media }, continue_on_error: true });
-  try { await api("POST", "/api/config/script/config/panel_everything_off", { alias: "Everything off", icon: "mdi:power", mode: "single", sequence: seq }); }
+  // same as a scene with everything off, so it gets the same check-and-retry
+  const lights = {}; CONFIG.lights.forEach(l => lights[l.id] = { m: "off" });
+  const seq = sceneSequence({ name: "Everything off", lights, ac: { m: "off" } });
+  if (media) seq.unshift({ action: "media_player.media_pause", target: { entity_id: media }, continue_on_error: true });
+  try { await api("POST", "/api/config/script/config/panel_everything_off", { alias: "Everything off", icon: "mdi:power", mode: "restart", sequence: seq }); }
   catch (e) { console.warn("everything-off script", e); }
 }
 async function ensureAutoOff(force){
@@ -1091,9 +1091,9 @@ function toggleAutoOff(){
 let syncedOnce = false;
 async function syncScripts(force){
   if (DEMO || (syncedOnce && !force)) return; syncedOnce = true;
-  ensureAutoOff(force); ensureEverythingOff();
+  ensureAutoOff(force);
   try {
-    const keep = new Set(SCENES.map(scriptKey));
+    const keep = new Set(SCENES.map(scriptKey)); keep.add("panel_everything_off");   // never delete the Everything off script
     for (const sc of SCENES) {
       const key = scriptKey(sc);
       if (!force && S["script." + key]) continue;
@@ -1103,6 +1103,7 @@ async function syncScripts(force){
       if (id.startsWith("script.panel_") && !keep.has(id.slice(7))) await api("DELETE", `/api/config/script/config/${id.slice(7)}`).catch(() => {});
     }
   } catch (e) { console.warn("script sync", e); }
+  ensureEverythingOff();
 }
 
 /* =====================================================================
@@ -2051,7 +2052,7 @@ function demoCall(domain, service, d){
 /* =====================================================================
    Auto-update: reload when a newer version is installed
    ===================================================================== */
-const VERSION = "2026.11.22.8";
+const VERSION = "2026.11.22.9";
 /* Home Assistant tells browsers to cache /local files for 31 days, so a plain reload can keep showing an
    old version. Check for a new version when the panel opens, when you come back to it, and every 5 min;
    if there is one, force-refresh the cached page and open it fresh. */
